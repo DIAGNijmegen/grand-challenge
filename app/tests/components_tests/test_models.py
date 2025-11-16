@@ -1142,7 +1142,7 @@ def test_relative_path_not_modified():
     with pytest.raises(ValidationError) as error:
         ci.clean()
 
-    assert str(error.value) == "The relative path cannot be changed"
+    assert str(error.value) == "['The relative path cannot be changed']"
 
 
 @pytest.mark.django_db
