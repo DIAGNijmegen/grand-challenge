@@ -48,6 +48,7 @@
     <span class="n">MinLengthValidator</span><span class="p">,</span>
     <span class="n">MinValueValidator</span><span class="p">,</span>
     <span class="n">RegexValidator</span><span class="p">,</span>
+    <span class="n">StepValueValidator</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">models</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.db.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Avg</span><span class="p">,</span> <span class="n">Count</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">Sum</span>
@@ -90,7 +91,6 @@
     <span class="n">process_access_request</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">grandchallenge.core.validators</span><span class="w"> </span><span class="kn">import</span> <span class="n">JSONValidator</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">grandchallenge.core.vendored.django.validators</span><span class="w"> </span><span class="kn">import</span> <span class="n">StepValueValidator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">grandchallenge.hanging_protocols.models</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">HangingProtocolMixin</span><span class="p">,</span>
     <span class="n">ViewportNames</span><span class="p">,</span>
@@ -1486,11 +1486,11 @@
     <span class="n">help_text</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TextField</span><span class="p">(</span><span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">answer_type</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
         <span class="n">max_length</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-        <span class="n">choices</span><span class="o">=</span><span class="n">AnswerType</span><span class="o">.</span><span class="n">choices</span><span class="p">,</span>
+        <span class="n">choices</span><span class="o">=</span><span class="n">AnswerType</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="c1"># Set blank because the requirement is dependent on answer_type and handled in the front end</span>
     <span class="n">image_port</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
-        <span class="n">max_length</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="n">ImagePort</span><span class="o">.</span><span class="n">choices</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="n">ImagePort</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
     <span class="p">)</span>
     <span class="n">default_annotation_color</span> <span class="o">=</span> <span class="n">HexColorField</span><span class="p">(</span>
         <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -1511,7 +1511,7 @@
         <span class="n">ComponentInterface</span><span class="p">,</span> <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">PROTECT</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span>
     <span class="p">)</span>
     <span class="n">widget</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
-        <span class="n">choices</span><span class="o">=</span><span class="n">QuestionWidgetKindChoices</span><span class="o">.</span><span class="n">choices</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span>
+        <span class="n">choices</span><span class="o">=</span><span class="n">QuestionWidgetKindChoices</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span>
     <span class="p">)</span>
     <span class="n">interactive_algorithm</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
         <span class="n">choices</span><span class="o">=</span><span class="n">InteractiveAlgorithmChoices</span><span class="o">.</span><span class="n">choices</span><span class="p">,</span>
