@@ -2016,6 +2016,7 @@ class ComponentImage(FieldChangeMixin, models.Model):
     image = models.FileField(
         blank=True,
         upload_to=docker_image_path,
+        max_length=255,
         validators=[
             ExtensionValidator(
                 allowed_extensions=(".tar", ".tar.gz", ".tar.xz")
