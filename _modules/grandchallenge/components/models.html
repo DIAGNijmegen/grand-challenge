@@ -2110,6 +2110,7 @@
     <span class="n">image</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span>
         <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">upload_to</span><span class="o">=</span><span class="n">docker_image_path</span><span class="p">,</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span>
         <span class="n">validators</span><span class="o">=</span><span class="p">[</span>
             <span class="n">ExtensionValidator</span><span class="p">(</span>
                 <span class="n">allowed_extensions</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;.tar&quot;</span><span class="p">,</span> <span class="s2">&quot;.tar.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;.tar.xz&quot;</span><span class="p">)</span>
