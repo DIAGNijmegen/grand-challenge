@@ -1196,6 +1196,9 @@ class DICOMImageSetUpload(UUIDModel):
 
         if adding:
             if self.creator:
+                assign_perm(
+                    f"view_{self._meta.model_name}", self.creator, self
+                )
                 follow(
                     user=self.creator,
                     obj=self,
