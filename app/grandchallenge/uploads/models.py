@@ -273,7 +273,9 @@ class UserUpload(UUIDModel):
             Bucket=self.bucket,
             Key=self.key,
             UploadId=self.s3_upload_id,
-            MultipartUpload={"Parts": parts},
+            MultipartUpload={
+                "Parts": sorted(parts, key=lambda p: p["PartNumber"])
+            },
         )
         self.status = self.StatusChoices.COMPLETED
         self.mimetype = self.mimetype_from_file
