@@ -363,7 +363,7 @@ class DICOMImageSetUploadList(
 ):
     model = DICOMImageSetUpload
     login_url = reverse_lazy("account_login")
-    row_template = "cases/rawimageuploadsession_row.html"
+    row_template = "cases/dicomimagesetupload_row.html"
     search_fields = ["pk"]
     columns = [
         Column(title="ID", sort_field="pk"),
