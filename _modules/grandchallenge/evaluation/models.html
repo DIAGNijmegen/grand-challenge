@@ -268,7 +268,6 @@
             <span class="o">.</span><span class="n">prefetch_related</span><span class="p">(</span>
                 <span class="c1"># This should be a select_related, but I cannot find a way</span>
                 <span class="c1"># to use a custom model manager with select_related</span>
-                <span class="c1"># Maybe this is solved with GeneratedField (Django 5)?</span>
                 <span class="n">models</span><span class="o">.</span><span class="n">Prefetch</span><span class="p">(</span>
                     <span class="s2">&quot;challenge&quot;</span><span class="p">,</span>
                     <span class="n">queryset</span><span class="o">=</span><span class="n">Challenge</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">with_available_compute</span><span class="p">(),</span>
