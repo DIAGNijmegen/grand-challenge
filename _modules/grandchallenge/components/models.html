@@ -1357,6 +1357,7 @@
                 <span class="p">)</span>
             <span class="p">),</span>
         <span class="p">],</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">image</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span>
         <span class="n">to</span><span class="o">=</span><span class="n">Image</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">PROTECT</span>
@@ -2112,7 +2113,6 @@
     <span class="n">image</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">FileField</span><span class="p">(</span>
         <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">upload_to</span><span class="o">=</span><span class="n">docker_image_path</span><span class="p">,</span>
-        <span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span>
         <span class="n">validators</span><span class="o">=</span><span class="p">[</span>
             <span class="n">ExtensionValidator</span><span class="p">(</span>
                 <span class="n">allowed_extensions</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;.tar&quot;</span><span class="p">,</span> <span class="s2">&quot;.tar.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;.tar.xz&quot;</span><span class="p">)</span>
@@ -2124,6 +2124,7 @@
             <span class="s2">&quot;https://docs.docker.com/engine/reference/commandline/save/&quot;</span>
         <span class="p">),</span>
         <span class="n">storage</span><span class="o">=</span><span class="n">private_s3_storage</span><span class="p">,</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">image_sha256</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">editable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">71</span><span class="p">)</span>
     <span class="n">latest_shimmed_version</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
