@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import time
 import uuid
 import zipfile
@@ -11,7 +10,7 @@ from django.conf import settings
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
 
-FORGE_MODULE_PATH = Path(os.path.dirname(os.path.realpath(__file__)))
+FORGE_MODULE_PATH = Path(__file__).parent
 FORGE_RESOURCES_PATH = FORGE_MODULE_PATH / "resources"
 FORGE_PARTIALS_PATH = FORGE_MODULE_PATH / "templates" / "forge" / "partials"
 
@@ -104,9 +103,7 @@ def copy_and_render(
     if not source_path.exists():
         raise TemplateDoesNotExist(source_path)
 
-    for root, _, files in os.walk(source_path, followlinks=True):
-        root = Path(root)
-
+    for root, _, files in source_path.walk():
         check_allowed_source(path=root)
 
         # Create relative path

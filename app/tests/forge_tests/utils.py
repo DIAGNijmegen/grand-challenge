@@ -10,9 +10,7 @@ from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
-TEST_RESOURCES = (
-    Path(os.path.dirname(os.path.realpath(__file__))) / "resources"
-)
+TEST_RESOURCES = Path(__file__).parent / "resources"
 DEFAULT_PACK_CONTEXT_STUB = {
     "challenge": {
         "slug": "challenge-slug",
