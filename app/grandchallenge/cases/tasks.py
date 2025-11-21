@@ -535,7 +535,14 @@ def _check_post_processor_result(*, post_processor_result, image):
 
 @acks_late_2xlarge_task(retry_on=(LockNotAcquiredException, RetryStep))
 @transaction.atomic
-def import_dicom_to_health_imaging(*, dicom_imageset_upload_pk):
+def import_dicom_to_health_imaging(
+    *,
+    dicom_imageset_upload_pk,
+    linked_app_label,
+    linked_model_name,
+    linked_object_pk,
+    linked_interface_slug,
+):
     with check_lock_acquired():
         upload = DICOMImageSetUpload.objects.select_for_update(
             nowait=True
@@ -551,6 +558,22 @@ def import_dicom_to_health_imaging(*, dicom_imageset_upload_pk):
             "Upload is not ready for de-identification and importing into Health Imaging."
         )
 
+    def _handle_error(*, error_message):
+        upload.user_uploads.all().delete()
+        upload.delete_input_files()
+        on_commit(
+            handle_dicom_import_error.signature(
+                kwargs={
+                    "upload_session_pk": dicom_imageset_upload_pk,
+                    "error_message": error_message,
+                    "linked_app_label": linked_app_label,
+                    "linked_model_name": linked_model_name,
+                    "linked_object_pk": linked_object_pk,
+                    "linked_interface_slug": linked_interface_slug,
+                }
+            ).apply_async
+        )
+
     try:
         upload.deidentify_user_uploads()
         upload.start_dicom_import_job()
@@ -561,16 +584,63 @@ def import_dicom_to_health_imaging(*, dicom_imageset_upload_pk):
     ) as e:
         raise RetryStep from e
     except RejectedDICOMFileError as e:
-        upload.mark_failed(error_message=e.justification)
-        upload.user_uploads.all().delete()
-        upload.delete_input_files()
+        _handle_error(error_message=e.justification)
     except Exception as e:
-        upload.mark_failed(error_message="An unexpected error occurred", exc=e)
-        upload.user_uploads.all().delete()
-        upload.delete_input_files()
+        logger.error(e, exc_info=True)
+        _handle_error(error_message="An unexpected error occurred")
     else:
         upload.status = DICOMImageSetUploadStatusChoices.STARTED
         upload.save()
+
+
+@acks_late_micro_short_task(
+    retry_on=(LockNotAcquiredException,), delayed_retry=False
+)
+@transaction.atomic
+def handle_dicom_import_error(
+    *,
+    dicom_imageset_upload_pk,
+    error_message,
+    linked_app_label,
+    linked_model_name,
+    linked_object_pk,
+    linked_interface_slug,
+):
+    with check_lock_acquired():
+        upload = DICOMImageSetUpload.objects.select_for_update(
+            nowait=True
+        ).get(pk=dicom_imageset_upload_pk)
+
+    if linked_object_pk:
+        try:
+            model = apps.get_model(
+                app_label=linked_app_label, model_name=linked_model_name
+            )
+            with check_lock_acquired():
+                linked_object = model.objects.select_for_update(
+                    nowait=True
+                ).get(pk=linked_object_pk)
+        except ObjectDoesNotExist:
+            # Linked object may have been deleted
+            logger.info(
+                f"Linked object {linked_app_label}.{linked_model_name}({linked_object_pk}) does not exist"
+            )
+            linked_object = None
+    else:
+        linked_object = None
+
+    try:
+        ci = ComponentInterface.objects.get(slug=linked_interface_slug)
+    except ObjectDoesNotExist:
+        logger.info(f"Linked interface {linked_interface_slug} does not exist")
+        ci = None
+
+    error_handler = upload.get_error_handler(linked_object=linked_object)
+
+    error_handler.handle_error(
+        interface=ci,
+        error_message=error_message,
+    )
 
 
 @acks_late_micro_short_task(retry_on=(LockNotAcquiredException,))

@@ -2688,7 +2688,13 @@ class CIVForObjectMixin:
 
             on_commit(
                 import_dicom_to_health_imaging.signature(
-                    kwargs={"dicom_imageset_upload_pk": upload.pk}
+                    kwargs={
+                        "dicom_imageset_upload_pk": upload.pk,
+                        "linked_app_label": self._meta.app_label,
+                        "linked_model_name": self._meta.model_name,
+                        "linked_object_pk": self.pk,
+                        "linked_interface_slug": ci.slug,
+                    }
                 ).apply_async
             )
         elif current_civ is None:
