@@ -27,6 +27,7 @@ from grandchallenge.serving.models import (
 )
 from grandchallenge.uploads.models import UserUpload
 from grandchallenge.uploads.widgets import (
+    DICOMUserUploadMultipleWidget,
     UserUploadMultipleWidget,
     UserUploadSingleWidget,
 )
@@ -45,6 +46,7 @@ class InterfaceFormFieldFactory:
     possible_widgets = {
         UserUploadMultipleWidget,
         UserUploadSingleWidget,
+        DICOMUserUploadMultipleWidget,
         JSONEditorWidget,
         FlexibleImageWidget,
         ImageSearchWidget,
