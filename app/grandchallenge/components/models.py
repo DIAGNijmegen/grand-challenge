@@ -2660,7 +2660,14 @@ class CIVForObjectMixin:
                     f"queryset for interface {ci}"
                 )
             upload = DICOMImageSetUpload(
-                creator=user, name=dicom_upload_with_name.name
+                creator=user,
+                name=dicom_upload_with_name.name,
+                error_handling_information={
+                    "linked_app_label": self._meta.app_label,
+                    "linked_model_name": self._meta.model_name,
+                    "linked_object_pk": str(self.pk),
+                    "linked_interface_slug": str(ci.slug),
+                },
             )
             upload.task_on_success = add_image_to_object.signature(
                 kwargs={
@@ -2688,13 +2695,7 @@ class CIVForObjectMixin:
 
             on_commit(
                 import_dicom_to_health_imaging.signature(
-                    kwargs={
-                        "dicom_imageset_upload_pk": upload.pk,
-                        "linked_app_label": self._meta.app_label,
-                        "linked_model_name": self._meta.model_name,
-                        "linked_object_pk": self.pk,
-                        "linked_interface_slug": ci.slug,
-                    }
+                    kwargs={"dicom_imageset_upload_pk": upload.pk}
                 ).apply_async
             )
         elif current_civ is None:

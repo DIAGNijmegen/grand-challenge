@@ -535,14 +535,7 @@ def _check_post_processor_result(*, post_processor_result, image):
 
 @acks_late_2xlarge_task(retry_on=(LockNotAcquiredException, RetryStep))
 @transaction.atomic
-def import_dicom_to_health_imaging(
-    *,
-    dicom_imageset_upload_pk,
-    linked_app_label,
-    linked_model_name,
-    linked_object_pk,
-    linked_interface_slug,
-):
+def import_dicom_to_health_imaging(*, dicom_imageset_upload_pk):
     with check_lock_acquired():
         upload = DICOMImageSetUpload.objects.select_for_update(
             nowait=True
@@ -566,10 +559,6 @@ def import_dicom_to_health_imaging(
                 kwargs={
                     "upload_session_pk": dicom_imageset_upload_pk,
                     "error_message": error_message,
-                    "linked_app_label": linked_app_label,
-                    "linked_model_name": linked_model_name,
-                    "linked_object_pk": linked_object_pk,
-                    "linked_interface_slug": linked_interface_slug,
                 }
             ).apply_async
         )
@@ -601,15 +590,18 @@ def handle_dicom_import_error(
     *,
     dicom_imageset_upload_pk,
     error_message,
-    linked_app_label,
-    linked_model_name,
-    linked_object_pk,
-    linked_interface_slug,
 ):
     with check_lock_acquired():
         upload = DICOMImageSetUpload.objects.select_for_update(
             nowait=True
         ).get(pk=dicom_imageset_upload_pk)
+
+    linked_object_pk = upload.error_handling_data.get("linked_object_pk")
+    linked_app_label = upload.error_handling_data.get("linked_app_label")
+    linked_model_name = upload.error_handling_data.get("linked_model_name")
+    linked_interface_slug = upload.error_handling_data.get(
+        "linked_interface_slug"
+    )
 
     if linked_object_pk:
         try:
@@ -660,6 +652,18 @@ def handle_health_imaging_import_job_event(*, event):
     if upload.status != DICOMImageSetUploadStatusChoices.STARTED:
         return
 
+    def _handle_error(*, error):
+        logger.error(error, exc_info=True)
+        on_commit(
+            handle_dicom_import_error.signature(
+                kwargs={
+                    "upload_session_pk": pk,
+                    "error_message": "An unexpected error occurred",
+                }
+            ).apply_async
+        )
+        upload.delete_input_files()
+
     health_imaging_client = boto3.client(
         "medical-imaging",
         region_name=settings.AWS_DEFAULT_REGION,
@@ -679,6 +683,8 @@ def handle_health_imaging_import_job_event(*, event):
             )
         else:
             raise ValueError("Invalid job status")
+
+        upload.delete_input_files()
     except (
         botocore.exceptions.EndpointConnectionError,
         health_imaging_client.exceptions.ThrottlingException,
@@ -693,15 +699,9 @@ def handle_health_imaging_import_job_event(*, event):
         ):
             raise RetryStep from e
         else:
-            upload.mark_failed(
-                error_message="An unexpected error occurred", exc=e
-            )  # TODO: Have to cancel jobs from here as well !!!!
+            _handle_error(error=e)
     except Exception as e:
-        upload.mark_failed(
-            error_message="An unexpected error occurred", exc=e
-        )  # TODO: Have to cancel jobs from here as well !!!!
-    finally:
-        upload.delete_input_files()
+        _handle_error(error=e)
 
 
 @acks_late_micro_short_task(retry_on=(RetryStep,))

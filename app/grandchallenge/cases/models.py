@@ -38,6 +38,7 @@ from pydantic.dataclasses import dataclass
 from storages.utils import clean_name
 
 from grandchallenge.core.error_handlers import (
+    DICOMImageSetUploadErrorHandler,
     RawImageUploadSessionErrorHandler,
 )
 from grandchallenge.core.guardian import (
@@ -1164,6 +1165,12 @@ class DICOMImageSetUpload(UUIDModel):
         editable=False,
         help_text="Serialized task that is run on job success",
     )
+    error_handling_data = models.JSONField(
+        default=None,
+        null=True,
+        editable=False,
+        help_text="Data about linked object and socket",
+    )
 
     class Meta:
         verbose_name = "DICOM image set upload"
@@ -1500,6 +1507,12 @@ class DICOMImageSetUpload(UUIDModel):
     def get_absolute_url(self):
         return reverse(
             "cases:dicom-image-set-upload-detail", kwargs={"pk": self.pk}
+        )
+
+    def get_error_handler(self, *, linked_object=None):
+        return DICOMImageSetUploadErrorHandler(
+            dicom_image_set_upload=self,
+            linked_object=linked_object,
         )
 
 
