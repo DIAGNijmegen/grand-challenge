@@ -1,0 +1,71 @@
+"""
+This script shows an example how to use GC-API to programmatically upload
+files to an archive.
+
+Remember, an archive is used to pull data per phase for a challenge. Each
+phase has a designated archive. The archive is approached using its slug.
+
+For your challenge, and this phase it is '{{phase.archive.slug }}'.
+
+Before you can run this script, you need to:
+ * install gc-api (`pip install gcapi`)
+ * update the EXPECTED_FILES
+ * update the API_TOKEN with a personal token
+
+Get a token from Grand Challenge:
+  https://grand-challenge.org/settings/api-tokens/create/
+
+For additional information about using gc-api and tokens, visit:
+  https://grand-challenge.org/documentation/what-can-gc-api-be-used-for/#your-personal-api-token
+
+Note that Grand-Challenge does its own post-processing on the files and the archive
+will be filled with the result of this post-processing.
+
+Check your uploaded results here:
+ {{ phase.archive.url }}
+
+And the intermediate processing state here:
+  https://grand-challenge.org/cases/uploads/
+
+Happy uploading!
+"""
+
+import gcapi
+
+API_TOKEN = "REPLACE-ME-WITH-YOUR-TOKEN"
+
+ARCHIVE_SLUG = "{{ phase.archive.slug }}"
+
+{% for interface_name, cases in expected_cases_per_interface.items %}
+EXPECTED_CASE_FILES_FOR_{{ interface_name.upper }} = [
+    {% for case in cases %}
+    {
+        {% for socket_slug, case in case.items %}
+        "{{ socket_slug }}": "{{ case }}",
+        {% endfor %}
+    },
+    {% endfor %}
+]
+{% endfor %}
+
+EXPECTED_CASES = [
+{% for interface_name in expected_cases_per_interface %}
+    *EXPECTED_CASE_FILES_FOR_{{ interface_name.upper }},
+{% endfor %}
+]
+
+def main():
+    # Uploads files to the Grand-Challenge archive
+
+    client = gcapi.Client(token=API_TOKEN)
+    total_number_of_cases = len(EXPECTED_CASES)
+    for idx, case in enumerate(EXPECTED_CASES):
+        print(f"Uploading {idx + 1}/{total_number_of_cases} to {ARCHIVE_SLUG}")
+        client.add_cases_to_archive(archive=ARCHIVE_SLUG, archive_items=[case])
+
+    return 0
+
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

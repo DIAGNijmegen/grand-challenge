@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+# Get the directory of the script
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Store the current PATH value
+original_path="$PATH"
+
+# Function to restore the original PATH
+restore_path() {
+    export PATH="$original_path"
+}
+
+# Trap the exit signal and call the restore_path function
+trap restore_path EXIT
+
+# Remove the script's directory from the PATH
+export PATH=$(echo $PATH | sed -e 's#:'$script_dir':#:#' -e 's#^'$script_dir':##' -e 's#:'$script_dir'$##')
+
+# Check if the first argument is 'save'
+if [ "$1" == "save" ]; then
+    # Pretend to save the image
+    echo "Fake saving the image..."
+    # Add any other logic related to saving the image here
+    exit 0
+else
+    # If the first argument is not 'save', pass the command to the actual Docker binary
+    docker "$@"
+fi

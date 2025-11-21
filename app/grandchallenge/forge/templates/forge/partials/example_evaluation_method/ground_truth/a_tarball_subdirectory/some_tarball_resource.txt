@@ -1,0 +1,3 @@
+# Inside a_tarball_subdirectory/some_tarball_resource.txt
+This might be some resource you would require to evaluate a submission.
+For instance: some ground truth for each image for your model.

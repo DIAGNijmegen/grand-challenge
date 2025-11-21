@@ -1,0 +1,398 @@
+{% load forge %}
+"""
+The following is a simple example evaluation method.
+
+It is meant to run within a container. Its steps are as follows:
+
+  1. Read the algorithm output
+  2. Associate original algorithm inputs with a ground truths via predictions.json
+  3. Calculate metrics by comparing the algorithm output to the ground truth
+  4. Repeat for all algorithm jobs that ran for this submission
+  5. Aggregate the calculated metrics
+  6. Save the metrics to metrics.json
+
+To run it locally, you can call the following bash script:
+
+  ./do_test_run.sh
+
+This will start the evaluation and reads from ./test/input and writes to ./test/output
+
+To save the container and prep it for upload to Grand-Challenge.org you can call:
+
+  ./do_save.sh
+
+Any container that shows the same behaviour will do, this is purely an example of how one COULD do it.
+
+Reference the documentation to get details on the runtime environment on the platform:
+https://grand-challenge.org/documentation/runtime-environment/
+
+Happy programming!
+"""
+import json
+{% if algorithm_output_sockets|has_image or phase.evaluation_additional_inputs|has_image or phase.evaluation_additional_outputs|has_image  %}
+from glob import glob
+import SimpleITK
+{% endif %}
+{% if algorithm_output_sockets|has_image or algorithm_output_sockets|has_file or phase.evaluation_additional_inputs|has_file %}
+import re
+{% endif %}
+{% if phase.evaluation_additional_outputs|has_image %}
+import numpy
+{% endif %}
+import random
+from statistics import mean
+from pathlib import Path
+from pprint import pformat
+from helpers import run_prediction_processing, tree, setup_logger
+import logging
+
+logger = logging.getLogger("evaluate")
+
+
+INPUT_DIRECTORY = Path("/input")
+OUTPUT_DIRECTORY = Path("/output")
+
+def main():
+    setup_logger(
+        # Optionally: change this to the more verbose DEBUG
+        level=logging.INFO,
+    )
+
+    log_inputs()
+
+    metrics = {}
+    predictions = read_predictions()
+
+    # We now process each algorithm job for this submission
+    # Note that the jobs are not in any specific order!
+    # We work that out from predictions.json
+
+    # predictions.json contains information about each job's inputs and outputs
+    # along with possible timing information. There are potentially up to two times
+    # available as ISO-8601 duration strings or None if not measured.
+    # We advise parsing these with isodate.parse_duration, available on pypi.
+    #
+    # We advise caution if you are considering using these times for ranking purposes,
+    # as they may not be stable for the duration of the challenge due to changes
+    # in the underlying implementation or infrastructure, or be repeatable
+    # due to shared hardware issues.
+    #
+    # `exec_duration`
+    #     The duration of the execution, **if measured**. Excludes data
+    #     validation, container pulling, model downloading, data downloading
+    #     and data uploading times.
+    #
+    #     Includes model loading time, input data loading time,
+    #     processing time, output data writing time and
+    #     **any delays from shared hardware issues**.
+    #
+    # `invoke_duration`
+    #     The duration of the execution, **if measured**. Excludes data
+    #     validation, container pulling, model downloading, data downloading
+    #     and data uploading times.
+    #
+    #     **Potentially excludes model loading time,
+    #     depending on the users implementation**.
+    #
+    #     Includes input data loading time, processing time,
+    #     output data writing time and
+    #     **any delays from shared hardware issues**.
+    #
+    # One, both or neither will be set.
+
+    # Use concurrent workers to process the predictions more efficiently
+    metrics["results"] = run_prediction_processing(fn=process, predictions=predictions)
+
+    # We have the results per prediction, we can aggregate the results and
+    # generate an overall score(s) for this submission
+    if metrics["results"]:
+        metrics["aggregates"] = {
+            "my_metric": mean(result["my_metric"] for result in metrics["results"])
+        }
+
+    # Make sure to save the metrics
+    write_metrics(metrics=metrics)
+
+    {% if phase.evaluation_additional_outputs %}
+
+    # For now, let us make bogus outputs for the evaluation
+    {% for socket in phase.evaluation_additional_outputs  %}
+    output_{{ socket.slug|dash_to_underscore }} = {% spaceless %}
+        {% if socket|has_example_value %}
+            {% if socket.example_value|is_string %}
+                "{{ socket.example_value }}"
+            {% else %}
+                {{ socket.example_value }}
+            {% endif %}
+        {% elif socket|is_image %} numpy.eye(4, 2)
+        {% elif socket|is_json %} {"content": "should match the required format"}
+        {% elif socket|is_file %} "content: should match the required format"
+        {% endif %}
+        {% endspaceless %}
+    {% endfor %}
+
+    # Save your output
+    {% for socket in phase.evaluation_additional_outputs  %}
+    {% if socket|is_image %}
+    write_array_as_image_file(
+        location=OUTPUT_DIRECTORY / "{{ socket.relative_path }}",
+        array=output_{{ socket.slug|dash_to_underscore }},
+    )
+    {% endif %}
+    {% if socket|is_json %}
+    write_json_file(
+        location=OUTPUT_DIRECTORY / "{{ socket.relative_path }}",
+        content=output_{{ socket.slug|dash_to_underscore }}
+    )
+    {% endif %}
+    {% if socket|is_file %}
+    write_file(
+        location=OUTPUT_DIRECTORY / "{{ socket.relative_path }}",
+        content=output_{{ socket.slug|dash_to_underscore }}
+    )
+    {% endif %}
+    {% endfor %}
+
+    {% endif %}
+
+    return 0
+
+def process(job):
+    # The key is a tuple of the slugs of the input sockets
+    interface_key = get_interface_key(job)
+
+    # Lookup the handler for this particular set of sockets (i.e. the interface)
+    handler = {
+    {% for interface_name, interface_key in algorithm_interface_names|zip:algorithm_interface_keys %}
+    {{ interface_key }} : process_{{ interface_name }},
+    {% endfor %}
+    }[interface_key]
+
+    {% if phase.evaluation_additional_inputs %}
+    # Read additional inputs from the submission
+
+    {% for socket in phase.evaluation_additional_inputs %}
+    {% if socket|is_image %}
+    submission_{{ socket.slug|dash_to_underscore }} = load_image_file_as_array(
+        location=INPUT_DIRECTORY / "{{ socket.relative_path }}",
+    )
+    {% endif %}
+    {% if socket|is_json %}
+    submission_{{ socket.slug|dash_to_underscore }} = load_json_file(
+        location=INPUT_DIRECTORY / "{{ socket.relative_path }}",
+    )
+    {% endif %}
+    {% if socket|is_file %}
+    submission_{{ socket.slug|dash_to_underscore }} = load_file(
+        location=INPUT_DIRECTORY / "{{ socket.relative_path }}",
+    )
+    {% endif %}
+    {% endfor %}
+    # Finally, call the handler
+    return handler(
+        job,
+    {% for socket in phase.evaluation_additional_inputs %}
+       submission_{{ socket.slug|dash_to_underscore }},
+    {% endfor %}
+    )
+    {% else %}
+    # Call the handler
+    return handler(job)
+    {% endif %}
+
+
+{% for interface_name, interface in algorithm_interface_names|zip:phase.algorithm_interfaces %}
+def process_{{ interface_name }}(job,
+    {% if phase.evaluation_additional_inputs %}# The submission had additional inputs: {% endif %}
+    {% for socket in phase.evaluation_additional_inputs %}
+    submission_{{ socket.slug|dash_to_underscore }},
+    {% endfor %}
+):
+    """Processes a single algorithm job, looking at the outputs"""
+    report = "Processing Job:\n"
+    report += pformat(job)
+    report += "\n"
+
+    # Firstly, find the location of the results
+    {% for socket in interface.outputs %}
+    location_{{ socket.slug|dash_to_underscore }} = get_file_location(
+            job_pk=job["pk"],
+            values=job["outputs"],
+            slug="{{ socket.slug }}",
+        )
+    {% endfor %}
+
+    # Secondly, read the results
+    {% for socket in interface.outputs %}
+    {% if socket|is_image %}
+    result_{{ socket.slug|dash_to_underscore }} = load_image_file_as_array(
+        location=location_{{ socket.slug|dash_to_underscore }},
+    )
+    {% endif %}
+    {% if socket|is_json %}
+    result_{{ socket.slug|dash_to_underscore }} = load_json_file(
+        location=location_{{ socket.slug|dash_to_underscore }},
+    )
+    {% endif %}
+    {% if socket|is_file %}
+    result_{{ socket.slug|dash_to_underscore }} = load_file(
+        location=location_{{ socket.slug|dash_to_underscore }},
+    )
+    {% endif %}
+    {% endfor %}
+
+
+    # Thirdly, retrieve the input file name to match it with your ground truth
+    {% for socket in interface.inputs %}
+    {% if socket|is_image %}
+    image_name_{{ socket.slug|dash_to_underscore }} = get_image_name(
+            values=job["inputs"],
+            slug="{{ socket.slug }}",
+    )
+    {% endif %}
+    {% if socket|is_file %}
+    file_name_{{ socket.slug|dash_to_underscore }} = get_file_name(
+            values=job["inputs"],
+            slug="{{ socket.slug }}",
+    )
+    {% endif %}
+    {% endfor %}
+
+    # Fourthly, load your ground truth
+
+    # Your ground truth will be extracted to the `ground_truth_dir` at runtime on Grand Challenge
+    # Note: when testing locally, the local `./ground_truth` directory is mounted here
+    # Eventually, you should upload it as a tarball to Grand Challenge!
+    # Go to Admin > Phase Settings and upload it under Ground Truths.
+    ground_truth_dir = Path("/opt/ml/input/data/ground_truth")
+    with open(ground_truth_dir / "a_tarball_subdirectory" / "some_tarball_resource.txt", "r") as f:
+        truth = f.read()
+    report += truth
+
+    logger.info(report)
+
+    # TODO: compare the results to your ground truth and compute some metrics
+
+    # For now, we will just report back some bogus metric
+    return {
+        "my_metric": random.choice([1, 0]),
+    }
+{% endfor %}
+
+
+def log_inputs():
+    # Just for convenience, in the logs you can then see what files you have to work with
+    logger.info("Input Files:")
+    for line in tree(INPUT_DIRECTORY):
+        logger.info(line)
+
+
+def read_predictions():
+    # The prediction file tells us the location of the users' predictions
+    return load_json_file(location = INPUT_DIRECTORY / "predictions.json")
+
+def get_interface_key(job):
+    # Each interface has a unique key that is the set of socket slugs given as input
+    socket_slugs = [sv["interface"]["slug"] for sv in job["inputs"]]
+    return tuple(sorted(socket_slugs))
+
+{% if algorithm_input_sockets|has_image or phase.evaluation_additional_inputs|has_image %}
+def get_image_name(*, values, slug):
+    # This tells us the user-provided name of the input or output image
+    for value in values:
+        if value["interface"]["slug"] == slug:
+            return value["image"]["name"]
+
+    raise RuntimeError(f"Image with interface {slug} not found!")
+{% endif %}
+
+
+{% if algorithm_input_sockets|has_file or phase.evaluation_additional_inputs|has_file %}
+def get_file_name(*, values, slug):
+    # This tells us the user-provided name of the input file
+    for value in values:
+        if value["interface"]["slug"] == slug:
+            file_url = value["file"]
+            pattern = r'[^/]+$'
+            match = re.search(pattern, file_url)
+            if match:
+                return match.group()
+            else:
+                raise RuntimeError("Could not parse filename.")
+    raise RuntimeError(f"File with interface {slug} not found!")
+{% endif %}
+
+
+def get_interface_relative_path(*, values, slug):
+    # Gets the location of the interface relative to the input or output
+    for value in values:
+        if value["interface"]["slug"] == slug:
+            return value["interface"]["relative_path"]
+
+    raise RuntimeError(f"Value with interface {slug} not found!")
+
+
+def get_file_location(*, job_pk, values, slug):
+    # Where a job's output file will be located in the evaluation container
+    relative_path = get_interface_relative_path(values=values, slug=slug)
+    return INPUT_DIRECTORY / job_pk / "output" / relative_path
+
+
+def load_json_file(*, location):
+    # Reads a json file
+    with open(location) as f:
+        return json.loads(f.read())
+
+{% if algorithm_output_sockets|has_image or phase.evaluation_additional_inputs|has_image%}
+def load_image_file_as_array(*, location):
+    # Use SimpleITK to read a file
+    input_files = glob(str(location / "*.tiff")) + glob(str(location / "*.mha"))
+    result = SimpleITK.ReadImage(input_files[0])
+
+    # Convert it to a Numpy array
+    return SimpleITK.GetArrayFromImage(result)
+{% endif %}
+
+{% if algorithm_output_sockets|has_file or phase.evaluation_additional_inputs|has_file %}
+def load_file(*, location):
+    # Reads the content of a file
+    with open(location) as f:
+        return f.read()
+{% endif %}
+
+
+def write_metrics(*, metrics):
+    # Write a json document used for ranking results on the leaderboard
+    write_json_file(location=OUTPUT_DIRECTORY / "metrics.json", content=metrics)
+
+{% if phase.evaluation_additional_outputs|has_file %}
+def write_file(*, location, content):
+    # Write the content to a file
+    with open(location, 'w') as f:
+        return f.write(content)
+{% endif %}
+
+{% if phase.evaluation_additional_outputs|has_image %}
+def write_array_as_image_file(*, location, array):
+    location.mkdir(parents=True, exist_ok=True)
+
+    # You may need to change the suffix to .tif to match the expected output
+    suffix = ".mha"
+
+    image = SimpleITK.GetImageFromArray(array)
+    SimpleITK.WriteImage(
+        image,
+        location / f"output{suffix}",
+        useCompression=True,
+    )
+{% endif %}
+
+
+def write_json_file(*, location, content):
+    # Writes a json file
+    with open(location, 'w') as f:
+        f.write(json.dumps(content, indent=4))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
