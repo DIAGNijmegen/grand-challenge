@@ -551,6 +551,18 @@ def import_dicom_to_health_imaging(*, dicom_imageset_upload_pk):
             "Upload is not ready for de-identification and importing into Health Imaging."
         )
 
+    def _handle_error(*, error_message):
+        upload.user_uploads.all().delete()
+        upload.delete_input_files()
+        on_commit(
+            handle_dicom_import_error.signature(
+                kwargs={
+                    "upload_session_pk": dicom_imageset_upload_pk,
+                    "error_message": error_message,
+                }
+            ).apply_async
+        )
+
     try:
         upload.deidentify_user_uploads()
         upload.start_dicom_import_job()
@@ -561,19 +573,69 @@ def import_dicom_to_health_imaging(*, dicom_imageset_upload_pk):
     ) as e:
         raise RetryStep from e
     except RejectedDICOMFileError as e:
-        upload.mark_failed(error_message=e.justification)
-        upload.user_uploads.all().delete()
-        upload.delete_input_files()
+        _handle_error(error_message=e.justification)
     except Exception as e:
-        upload.mark_failed(error_message="An unexpected error occurred", exc=e)
-        upload.user_uploads.all().delete()
-        upload.delete_input_files()
+        logger.error(e, exc_info=True)
+        _handle_error(error_message="An unexpected error occurred")
     else:
         upload.status = DICOMImageSetUploadStatusChoices.STARTED
         upload.save()
 
 
-@acks_late_micro_short_task(retry_on=(LockNotAcquiredException,))
+@acks_late_micro_short_task(
+    retry_on=(LockNotAcquiredException,), delayed_retry=False
+)
+@transaction.atomic
+def handle_dicom_import_error(
+    *,
+    dicom_imageset_upload_pk,
+    error_message,
+):
+    with check_lock_acquired():
+        upload = DICOMImageSetUpload.objects.select_for_update(
+            nowait=True
+        ).get(pk=dicom_imageset_upload_pk)
+
+    linked_object_pk = upload.error_handling_data.get("linked_object_pk")
+    linked_app_label = upload.error_handling_data.get("linked_app_label")
+    linked_model_name = upload.error_handling_data.get("linked_model_name")
+    linked_interface_slug = upload.error_handling_data.get(
+        "linked_interface_slug"
+    )
+
+    if linked_object_pk:
+        try:
+            model = apps.get_model(
+                app_label=linked_app_label, model_name=linked_model_name
+            )
+            with check_lock_acquired():
+                linked_object = model.objects.select_for_update(
+                    nowait=True
+                ).get(pk=linked_object_pk)
+        except ObjectDoesNotExist:
+            # Linked object may have been deleted
+            logger.info(
+                f"Linked object {linked_app_label}.{linked_model_name}({linked_object_pk}) does not exist"
+            )
+            linked_object = None
+    else:
+        linked_object = None
+
+    try:
+        ci = ComponentInterface.objects.get(slug=linked_interface_slug)
+    except ObjectDoesNotExist:
+        logger.info(f"Linked interface {linked_interface_slug} does not exist")
+        ci = None
+
+    error_handler = upload.get_error_handler(linked_object=linked_object)
+
+    error_handler.handle_error(
+        interface=ci,
+        error_message=error_message,
+    )
+
+
+@acks_late_micro_short_task(retry_on=(LockNotAcquiredException, RetryStep))
 @transaction.atomic
 def handle_health_imaging_import_job_event(*, event):
     job_name = event["jobName"]
@@ -590,7 +652,56 @@ def handle_health_imaging_import_job_event(*, event):
     if upload.status != DICOMImageSetUploadStatusChoices.STARTED:
         return
 
-    upload.handle_event(event=event)
+    def _handle_error(*, error):
+        logger.error(error, exc_info=True)
+        on_commit(
+            handle_dicom_import_error.signature(
+                kwargs={
+                    "upload_session_pk": pk,
+                    "error_message": "An unexpected error occurred",
+                }
+            ).apply_async
+        )
+        upload.delete_input_files()
+
+    health_imaging_client = boto3.client(
+        "medical-imaging",
+        region_name=settings.AWS_DEFAULT_REGION,
+    )
+
+    try:
+        job_status = event["jobStatus"]
+        job_summary = upload.get_job_summary(event=event)
+
+        if job_status == "COMPLETED":
+            upload.validate_image_set(job_summary=job_summary)
+            upload.handle_completed_job(job_summary=job_summary)
+        elif job_status == "FAILED":
+            upload.handle_failed_job(job_summary=job_summary)
+            logger.error(
+                f"Import job {job_summary.job_id} failed for DICOMImageSetUpload {upload.pk}"
+            )
+        else:
+            raise ValueError("Invalid job status")
+
+        upload.delete_input_files()
+    except (
+        botocore.exceptions.EndpointConnectionError,
+        health_imaging_client.exceptions.ThrottlingException,
+        health_imaging_client.exceptions.ServiceQuotaExceededException,
+    ) as e:
+        raise RetryStep from e
+    except health_imaging_client.exceptions.ConflictException as e:
+        if (
+            "Requested ImageSet metadata is not consistent yet. "
+            "Please retry after a few seconds."
+            in e.response["Error"]["Message"]
+        ):
+            raise RetryStep from e
+        else:
+            _handle_error(error=e)
+    except Exception as e:
+        _handle_error(error=e)
 
 
 @acks_late_micro_short_task(retry_on=(RetryStep,))
