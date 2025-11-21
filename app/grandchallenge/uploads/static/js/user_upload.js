@@ -27,7 +27,7 @@
 
         const uppy = new Uppy.Core({
             id: `${window.location.pathname}-${inputId}`,
-            autoProceed: true,
+            autoProceed: false,
             restrictions: {
                 maxNumberOfFiles: maxNumberOfFiles,
                 allowedFileTypes,
@@ -113,9 +113,14 @@
                             );
                             uppy.removeFile(file.id);
                         }
-                        return;
+                        break; // stop checking other preprocessors
                     }
                 }
+            }
+
+            // Auto-upload after preprocessing (or immediately if no preprocessor matched)
+            if (uppy.getFile(file.id)) {
+                uppy.upload().catch(err => console.error(err));
             }
         });
     }
