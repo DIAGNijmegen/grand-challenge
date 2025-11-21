@@ -643,7 +643,7 @@ def handle_dicom_import_error(
     )
 
 
-@acks_late_micro_short_task(retry_on=(LockNotAcquiredException,))
+@acks_late_micro_short_task(retry_on=(LockNotAcquiredException, RetryStep))
 @transaction.atomic
 def handle_health_imaging_import_job_event(*, event):
     job_name = event["jobName"]
@@ -660,7 +660,48 @@ def handle_health_imaging_import_job_event(*, event):
     if upload.status != DICOMImageSetUploadStatusChoices.STARTED:
         return
 
-    upload.handle_event(event=event)
+    health_imaging_client = boto3.client(
+        "medical-imaging",
+        region_name=settings.AWS_DEFAULT_REGION,
+    )
+
+    try:
+        job_status = event["jobStatus"]
+        job_summary = upload.get_job_summary(event=event)
+
+        if job_status == "COMPLETED":
+            upload.validate_image_set(job_summary=job_summary)
+            upload.handle_completed_job(job_summary=job_summary)
+        elif job_status == "FAILED":
+            upload.handle_failed_job(job_summary=job_summary)
+            logger.error(
+                f"Import job {job_summary.job_id} failed for DICOMImageSetUpload {upload.pk}"
+            )
+        else:
+            raise ValueError("Invalid job status")
+    except (
+        botocore.exceptions.EndpointConnectionError,
+        health_imaging_client.exceptions.ThrottlingException,
+        health_imaging_client.exceptions.ServiceQuotaExceededException,
+    ) as e:
+        raise RetryStep from e
+    except health_imaging_client.exceptions.ConflictException as e:
+        if (
+            "Requested ImageSet metadata is not consistent yet. "
+            "Please retry after a few seconds."
+            in e.response["Error"]["Message"]
+        ):
+            raise RetryStep from e
+        else:
+            upload.mark_failed(
+                error_message="An unexpected error occurred", exc=e
+            )  # TODO: Have to cancel jobs from here as well !!!!
+    except Exception as e:
+        upload.mark_failed(
+            error_message="An unexpected error occurred", exc=e
+        )  # TODO: Have to cancel jobs from here as well !!!!
+    finally:
+        upload.delete_input_files()
 
 
 @acks_late_micro_short_task(retry_on=(RetryStep,))

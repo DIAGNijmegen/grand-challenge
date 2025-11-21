@@ -1408,31 +1408,12 @@ class DICOMImageSetUpload(UUIDModel):
 
         return [json.loads(line) for line in obj["Body"].iter_lines()]
 
-    def handle_event(self, *, event):
-        try:
-            job_status = event["jobStatus"]
-            job_summary = self.get_job_summary(event=event)
-            if job_status == "COMPLETED":
-                self.handle_completed_job(job_summary=job_summary)
-            elif job_status == "FAILED":
-                self.handle_failed_job(job_summary=job_summary)
-            else:
-                raise ValueError("Invalid job status")
-        except Exception as e:
-            self.mark_failed(
-                error_message="An unexpected error occurred", exc=e
-            )
-        else:
-            self.status = self.DICOMImageSetUploadStatusChoices.COMPLETED
-            self.save()
-            self.execute_task_on_success()
-        finally:
-            self.delete_input_files()
-
     def handle_completed_job(self, *, job_summary):
-        self.validate_image_set(job_summary=job_summary)
         image_set_id = job_summary.image_sets_summary[0].image_set_id
         self.convert_image_set_to_internal(image_set_id=image_set_id)
+        self.status = self.DICOMImageSetUploadStatusChoices.COMPLETED
+        self.save()
+        self.execute_task_on_success()
 
     def validate_image_set(self, *, job_summary):
         if (
@@ -1469,9 +1450,7 @@ class DICOMImageSetUpload(UUIDModel):
             job_summary=job_summary
         )
         self.delete_image_sets(job_summary=job_summary)
-        raise RuntimeError(
-            f"Import job {job_summary.job_id} failed for DICOMImageSetUpload {self.pk}"
-        )
+        self.mark_failed(error_message="An unexpected error occurred")
 
     @staticmethod
     def delete_image_sets(*, job_summary):
