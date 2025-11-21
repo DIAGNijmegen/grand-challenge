@@ -50,4 +50,5 @@ class DICOMUserUploadMultipleWidget(UserUploadMultipleWidget):
     def get_context(self, *args, **kwargs):
         context = super().get_context(*args, **kwargs)
         context["widget"]["attrs"]["max_number_files"] = 2000
+        context["widget"]["type"] = "dicom"
         return context

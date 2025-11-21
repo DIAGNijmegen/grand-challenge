@@ -24,10 +24,11 @@
             document.getElementById(`${inputId}AllowedFileTypes`).textContent,
         );
         const maxNumberOfFiles = widget.getAttribute("data-max-number-files");
+        const isDicomWidget = widget.dataset.type === "dicom";
 
         const uppy = new Uppy.Core({
             id: `${window.location.pathname}-${inputId}`,
-            autoProceed: false,
+            autoProceed: !isDicomWidget,
             restrictions: {
                 maxNumberOfFiles: maxNumberOfFiles,
                 allowedFileTypes,
@@ -99,30 +100,34 @@
             fileList.prepend(newFile);
         });
 
-        uppy.on("file-added", async file => {
-            if (globalThis.UPPY_FILE_PREPROCESSORS) {
-                for (const preprocessor of globalThis.UPPY_FILE_PREPROCESSORS) {
-                    if (await preprocessor.fileMatcher(file)) {
-                        try {
-                            const processedFile =
-                                await preprocessor.preprocessor(file.data);
-                            uppy.setFileState(file.id, { data: processedFile });
-                        } catch (e) {
-                            window.alert(
-                                `Could not upload ${file.name} (${file.type}): ${e.message}`,
-                            );
-                            uppy.removeFile(file.id);
+        if (isDicomWidget) {
+            uppy.on("file-added", async file => {
+                if (globalThis.UPPY_FILE_PREPROCESSORS) {
+                    for (const preprocessor of globalThis.UPPY_FILE_PREPROCESSORS) {
+                        if (await preprocessor.fileMatcher(file)) {
+                            try {
+                                const processedFile =
+                                    await preprocessor.preprocessor(file.data);
+                                uppy.setFileState(file.id, {
+                                    data: processedFile,
+                                });
+                            } catch (e) {
+                                window.alert(
+                                    `Could not upload ${file.name} (${file.type}): ${e.message}`,
+                                );
+                                uppy.removeFile(file.id);
+                            }
+                            break; // stop checking other preprocessors
                         }
-                        break; // stop checking other preprocessors
                     }
                 }
-            }
 
-            // Auto-upload after preprocessing (or immediately if no preprocessor matched)
-            if (uppy.getFile(file.id)) {
-                uppy.upload().catch(err => console.error(err));
-            }
-        });
+                // Auto-upload after preprocessing (or immediately if no preprocessor matched)
+                if (uppy.getFile(file.id)) {
+                    uppy.upload().catch(err => console.error(err));
+                }
+            });
+        }
     }
 
     function getCookie(name) {
