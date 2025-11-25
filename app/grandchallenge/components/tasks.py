@@ -24,7 +24,7 @@ from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import OperationalError, transaction
 from django.db.models import Count, DateTimeField, ExpressionWrapper, F, Q
 from django.db.transaction import on_commit
 from django.utils.module_loading import import_string
@@ -148,7 +148,7 @@ def upload_to_registry_and_sagemaker(
             push_container_image(instance=instance)
             instance.is_in_registry = True
             instance.save()
-        except ValidationError as error:
+        except (OperationalError, ValidationError) as error:
             instance.is_in_registry = False
             instance.status = oxford_comma(error)
             instance.import_status = instance.ImportStatusChoices.FAILED
