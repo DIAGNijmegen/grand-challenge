@@ -4,16 +4,15 @@ import uuid
 from copy import deepcopy
 from pathlib import Path
 
-from django.conf import settings
-
 from grandchallenge.forge.generation_utils import (
     copy_and_render,
     generate_socket_value_stub_file,
     socket_to_socket_value,
 )
-from grandchallenge.forge.schemas import (
-    validate_algorithm_template_context,
-    validate_pack_context,
+from grandchallenge.forge.models import (
+    ForgeAlgorithmTemplateContext,
+    ForgePackContext,
+    ForgePhaseContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -21,13 +20,11 @@ logger = logging.getLogger(__name__)
 
 def generate_challenge_pack(
     *,
-    output_zip_file,
-    target_zpath,
     context,
+    target_zpath,
+    output_zip_file,
 ):
-    validate_pack_context(context)
-
-    context["grand_challenge_forge_version"] = settings.COMMIT_ID
+    context = ForgePackContext(**context).model_dump()
 
     # Generate the README.md file
     copy_and_render(
@@ -85,14 +82,8 @@ def generate_upload_to_archive_script(
 
         expected_cases_per_interface[interface_name] = archive_cases
 
-    all_algorithm_inputs = {}
-    for interface in context["phase"]["algorithm_interfaces"]:
-        for socket in interface["inputs"]:
-            all_algorithm_inputs[socket["slug"]] = socket
-
     context.update(
         {
-            "all_algorithm_inputs": all_algorithm_inputs,
             "expected_cases_per_interface": expected_cases_per_interface,
         }
     )
@@ -131,33 +122,13 @@ def generate_archive_cases(
     return result
 
 
-def _interface_context(interfaces):
-    # Build context
-    algorithm_input_sockets = [
-        socket for interface in interfaces for socket in interface["inputs"]
-    ]
-    algorithm_output_sockets = [
-        socket for interface in interfaces for socket in interface["outputs"]
-    ]
-
-    algorithm_interface_keys = []
-    for interface in interfaces:
-        algorithm_interface_keys.append(
-            tuple(sorted([socket["slug"] for socket in interface["inputs"]]))
-        )
-
-    interface_names = [f"interf{idx}" for idx, _ in enumerate(interfaces)]
-
-    return {
-        "algorithm_interface_names": interface_names,
-        "algorithm_interface_keys": algorithm_interface_keys,
-        "algorithm_input_sockets": algorithm_input_sockets,
-        "algorithm_output_sockets": algorithm_output_sockets,
-    }
-
-
-def generate_example_algorithm(*, output_zip_file, target_zpath, context):
-    context = deepcopy(context)
+def generate_example_algorithm(
+    *,
+    context,
+    target_zpath,
+    output_zip_file,
+):
+    context = ForgePhaseContext(**context).model_dump()
 
     interface_names = []
     for idx, interface in enumerate(context["phase"]["algorithm_interfaces"]):
@@ -183,10 +154,6 @@ def generate_example_algorithm(*, output_zip_file, target_zpath, context):
                 socket=input,
             )
 
-    context.update(
-        _interface_context(interfaces=context["phase"]["algorithm_interfaces"])
-    )
-
     copy_and_render(
         templates_dir_name="example_algorithm",
         output_zip_file=output_zip_file,
@@ -195,11 +162,14 @@ def generate_example_algorithm(*, output_zip_file, target_zpath, context):
     )
 
 
-def generate_example_evaluation(*, output_zip_file, target_zpath, context):
-    context = deepcopy(context)
-    context.update(
-        _interface_context(interfaces=context["phase"]["algorithm_interfaces"])
-    )
+def generate_example_evaluation(
+    *,
+    context,
+    target_zpath,
+    output_zip_file,
+):
+
+    context = ForgePhaseContext(**context).model_dump()
 
     input_zdir = target_zpath / "test" / "input"
 
@@ -280,12 +250,10 @@ def generate_prediction_files(*, output_zip_file, target_zpath, predictions):
 def generate_algorithm_template(
     *,
     context,
-    output_zip_file,
     target_zpath,
+    output_zip_file,
 ):
-    validate_algorithm_template_context(context)
-
-    context["grand_challenge_forge_version"] = settings.COMMIT_ID
+    context = ForgeAlgorithmTemplateContext(**context).model_dump()
 
     generate_example_algorithm(
         context={"phase": context["algorithm"]},

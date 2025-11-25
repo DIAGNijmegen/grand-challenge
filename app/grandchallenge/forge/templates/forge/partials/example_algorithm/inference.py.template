@@ -24,7 +24,7 @@ Happy programming!
 from pathlib import Path
 import json
 import torch
-{% if algorithm_input_sockets|has_image or algorithm_output_sockets|has_image %}
+{% if phase.algorithm_input_sockets|has_image or phase.algorithm_output_sockets|has_image %}
 from glob import glob
 import SimpleITK
 import numpy
@@ -40,7 +40,7 @@ def run():
 
     # Lookup the handler for this particular set of sockets (i.e. the interface)
     handler = {
-    {% for interface_name, interface_key in algorithm_interface_names|zip:algorithm_interface_keys %}
+    {% for interface_name, interface_key in phase.algorithm_interface_names|zip:phase.algorithm_interface_keys %}
     {{ interface_key }} : {{ interface_name }}_handler,
     {% endfor %}
     }[interface_key]
@@ -48,7 +48,7 @@ def run():
     # Call the handler
     return handler()
 
-{% for interface_name, interface in algorithm_interface_names|zip:phase.algorithm_interfaces %}
+{% for interface_name, interface in phase.algorithm_interface_names|zip:phase.algorithm_interfaces %}
 def {{ interface_name }}_handler():
     # Read the input
     {% for socket in interface.inputs %}
@@ -141,7 +141,7 @@ def load_json_file(*, location):
     with open(location, 'r') as f:
         return json.loads(f.read())
 
-{% if algorithm_output_sockets|has_json %}
+{% if phase.algorithm_output_sockets|has_json %}
 def write_json_file(*, location, content):
     # Writes a json file
     with open(location, 'w') as f:
@@ -149,7 +149,7 @@ def write_json_file(*, location, content):
 {% endif %}
 
 
-{% if algorithm_input_sockets|has_image %}
+{% if phase.algorithm_input_sockets|has_image %}
 def load_image_file_as_array(*, location):
     # Use SimpleITK to read a file
     input_files = glob(str(location / "*.tif")) + glob(str(location / "*.tiff")) + glob(str(location / "*.mha"))
@@ -160,7 +160,7 @@ def load_image_file_as_array(*, location):
 {% endif %}
 
 
-{% if algorithm_output_sockets|has_image %}
+{% if phase.algorithm_output_sockets|has_image %}
 def write_array_as_image_file(*, location, array):
     location.mkdir(parents=True, exist_ok=True)
 
@@ -176,7 +176,7 @@ def write_array_as_image_file(*, location, array):
 {% endif %}
 
 
-{% if algorithm_input_sockets|has_file %}
+{% if phase.algorithm_input_sockets|has_file %}
 # Note to the developer:
 #   the following function is very generic and should likely
 #   be adopted to something more specific for your algorithm/challenge
@@ -187,7 +187,7 @@ def load_file(*, location):
 {% endif %}
 
 
-{% if algorithm_output_sockets|has_file %}
+{% if phase.algorithm_output_sockets|has_file %}
 # Note to the developer:
 #   the following function is very generic and should likely
 #   be adopted to something more specific for your algorithm/challenge

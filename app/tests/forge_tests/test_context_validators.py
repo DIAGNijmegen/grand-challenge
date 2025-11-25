@@ -1,11 +1,11 @@
 from contextlib import nullcontext
 
 import pytest
+from pydantic_core import ValidationError
 
-from grandchallenge.forge.exceptions import InvalidContextError
-from grandchallenge.forge.schemas import (
-    validate_algorithm_template_context,
-    validate_pack_context,
+from grandchallenge.forge.models import (
+    ForgeAlgorithmTemplateContext,
+    ForgePackContext,
 )
 from tests.forge_tests.utils import (
     algorithm_template_context_factory,
@@ -16,12 +16,11 @@ from tests.forge_tests.utils import (
 @pytest.mark.parametrize(
     "json_context,condition",
     [
-        [{}, pytest.raises(InvalidContextError)],
-        ["", pytest.raises(InvalidContextError)],
-        [{"challenge": []}, pytest.raises(InvalidContextError)],
+        [{}, pytest.raises(ValidationError)],
+        [{"challenge": []}, pytest.raises(ValidationError)],
         [
             {"challenge": {}},
-            pytest.raises(InvalidContextError),
+            pytest.raises(ValidationError),
         ],
         [
             pack_context_factory(),
@@ -35,18 +34,17 @@ from tests.forge_tests.utils import (
 )
 def test_pack_context_validity(json_context, condition):
     with condition:
-        validate_pack_context(json_context)
+        ForgePackContext(**json_context)
 
 
 @pytest.mark.parametrize(
     "json_context,condition",
     [
-        [{}, pytest.raises(InvalidContextError)],
-        ["", pytest.raises(InvalidContextError)],
-        [{"algorithm": []}, pytest.raises(InvalidContextError)],
+        [{}, pytest.raises(ValidationError)],
+        [{"algorithm": []}, pytest.raises(ValidationError)],
         [
             {"algorithm": {}},
-            pytest.raises(InvalidContextError),
+            pytest.raises(ValidationError),
         ],
         [
             algorithm_template_context_factory(),
@@ -56,4 +54,4 @@ def test_pack_context_validity(json_context, condition):
 )
 def test_algorithm_template_context_validity(json_context, condition):
     with condition:
-        validate_algorithm_template_context(json_context)
+        ForgeAlgorithmTemplateContext(**json_context)
