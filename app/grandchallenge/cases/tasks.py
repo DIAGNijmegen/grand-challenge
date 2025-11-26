@@ -596,41 +596,10 @@ def handle_dicom_import_error(
             nowait=True
         ).get(pk=dicom_imageset_upload_pk)
 
-    linked_object_pk = upload.error_handling_data.get("linked_object_pk")
-    linked_app_label = upload.error_handling_data.get("linked_app_label")
-    linked_model_name = upload.error_handling_data.get("linked_model_name")
-    linked_interface_slug = upload.error_handling_data.get(
-        "linked_interface_slug"
-    )
-
-    if linked_object_pk:
-        try:
-            model = apps.get_model(
-                app_label=linked_app_label, model_name=linked_model_name
-            )
-            with check_lock_acquired():
-                linked_object = model.objects.select_for_update(
-                    nowait=True
-                ).get(pk=linked_object_pk)
-        except ObjectDoesNotExist:
-            # Linked object may have been deleted
-            logger.info(
-                f"Linked object {linked_app_label}.{linked_model_name}({linked_object_pk}) does not exist"
-            )
-            linked_object = None
-    else:
-        linked_object = None
-
-    try:
-        ci = ComponentInterface.objects.get(slug=linked_interface_slug)
-    except ObjectDoesNotExist:
-        logger.info(f"Linked interface {linked_interface_slug} does not exist")
-        ci = None
-
-    error_handler = upload.get_error_handler(linked_object=linked_object)
+    error_handler = upload.get_error_handler()
 
     error_handler.handle_error(
-        interface=ci,
+        interface=upload.linked_socket,
         error_message=error_message,
     )
 

@@ -14,6 +14,8 @@ from botocore.awsrequest import AWSRequest
 from botocore.exceptions import ClientError
 from celery import signature
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, SuspiciousFileOperation
 from django.db import models
 from django.db.models.signals import post_delete
@@ -1165,11 +1167,24 @@ class DICOMImageSetUpload(UUIDModel):
         editable=False,
         help_text="Serialized task that is run on job success",
     )
-    error_handling_data = models.JSONField(
-        default=None,
+    linked_object_content_type = models.ForeignKey(
+        ContentType,
+        blank=True,
         null=True,
-        editable=False,
-        help_text="Data about linked object and socket",
+        related_name="dicomimagesetupload_linked_object",
+        on_delete=models.CASCADE,
+        db_index=True,
+    )
+    linked_object_object_id = models.CharField(
+        max_length=255, blank=True, null=True, db_index=True
+    )
+    linked_object = GenericForeignKey(
+        "linked_object_content_type", "linked_object_object_id"
+    )
+    linked_socket = models.ForeignKey(
+        to="components.ComponentInterface",
+        null=True,
+        on_delete=models.SET_NULL,
     )
 
     class Meta:
@@ -1509,10 +1524,10 @@ class DICOMImageSetUpload(UUIDModel):
             "cases:dicom-image-set-upload-detail", kwargs={"pk": self.pk}
         )
 
-    def get_error_handler(self, *, linked_object=None):
+    def get_error_handler(self):
         return DICOMImageSetUploadErrorHandler(
             dicom_image_set_upload=self,
-            linked_object=linked_object,
+            linked_object=self.linked_object,
         )
 
 
