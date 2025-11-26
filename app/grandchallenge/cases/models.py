@@ -1444,6 +1444,7 @@ class DICOMImageSetUpload(UUIDModel):
             or job_summary.number_of_generated_image_sets == 0
         ):
             self.handle_failed_job(job_summary=job_summary)
+            return
         elif job_summary.number_of_generated_image_sets > 1:
             self.delete_image_sets(job_summary=job_summary)
             raise RuntimeError(
@@ -1472,7 +1473,11 @@ class DICOMImageSetUpload(UUIDModel):
             job_summary=job_summary
         )
         self.delete_image_sets(job_summary=job_summary)
-        self.mark_failed(error_message="An unexpected error occurred")
+        error_handler = self.get_error_handler()
+        error_handler.handle_error(
+            interface=self.linked_socket,
+            error_message="An unexpected error occurred",
+        )
 
     @staticmethod
     def delete_image_sets(*, job_summary):
