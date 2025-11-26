@@ -47,6 +47,16 @@ class DICOMUserUploadMultipleWidget(UserUploadMultipleWidget):
             "js/dicom_deidentification.js",
         )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            *args,
+            allowed_file_types=(
+                "application/dicom",
+                "application/octet-stream",  # many dicom files have this
+            ),
+            **kwargs,
+        )
+
     def get_context(self, *args, **kwargs):
         context = super().get_context(*args, **kwargs)
         context["widget"]["attrs"]["max_number_files"] = 2000
