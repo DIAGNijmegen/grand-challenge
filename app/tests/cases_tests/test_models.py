@@ -278,16 +278,11 @@ def test_handle_failed_job(mocker, import_job_summary):
     )
     spy_delete_image_sets = mocker.spy(di_upload, "delete_image_sets")
 
-    with pytest.raises(RuntimeError) as error:
-        di_upload.handle_failed_job(job_summary=job_summary)
-
-    assert (
-        str(error.value)
-        == f"Import job {job_summary.job_id} failed for DICOMImageSetUpload {di_upload.pk}"
-    )
+    di_upload.handle_failed_job(job_summary=job_summary)
 
     mock_get_failure_log.assert_called_once_with(job_summary=job_summary)
     spy_delete_image_sets.assert_called_once_with(job_summary=job_summary)
+    assert di_upload.status == "FAILED"
     assert di_upload.internal_failure_log == failure_log
 
 
@@ -307,18 +302,13 @@ def test_validate_image_set_no_generated_image_set(mocker, import_job_summary):
     )
     mocker.patch.object(di_upload, "get_job_summary", return_value=job_summary)
     mock_get_failure_log = mocker.patch.object(
-        di_upload, "get_job_output_failure_log"
+        di_upload, "get_job_output_failure_log", return_value=[]
     )
 
-    with pytest.raises(RuntimeError) as error:
-        di_upload.validate_image_set(job_summary=job_summary)
-
-    assert (
-        str(error.value)
-        == f"Import job {job_summary.job_id} failed for DICOMImageSetUpload {di_upload.pk}"
-    )
+    di_upload.validate_image_set(job_summary=job_summary)
 
     mock_get_failure_log.assert_called_once_with(job_summary=job_summary)
+    assert di_upload.status == "FAILED"
 
 
 @pytest.mark.django_db

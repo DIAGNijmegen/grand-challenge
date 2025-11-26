@@ -222,9 +222,7 @@ def test_import_dicom_to_health_imaging_for_not_pending_upload():
 
 
 @pytest.mark.django_db
-def test_import_dicom_to_health_imaging_updates_status_when_successful(
-    django_capture_on_commit_callbacks,
-):
+def test_import_dicom_to_health_imaging_updates_status_when_successful():
     di_upload = DICOMImageSetUploadFactory()
     with (
         patch.object(
@@ -232,10 +230,7 @@ def test_import_dicom_to_health_imaging_updates_status_when_successful(
         ) as mocked_import_method,
         patch.object(DICOMImageSetUpload, "deidentify_user_uploads"),
     ):
-        with django_capture_on_commit_callbacks(execute=True):
-            import_dicom_to_health_imaging(
-                dicom_imageset_upload_pk=di_upload.pk
-            )
+        import_dicom_to_health_imaging(dicom_imageset_upload_pk=di_upload.pk)
 
         mocked_import_method.assert_called_once()
 
@@ -245,8 +240,12 @@ def test_import_dicom_to_health_imaging_updates_status_when_successful(
 
 @pytest.mark.django_db
 def test_start_dicom_import_job_does_not_run_when_deid_fails(
+    settings,
     django_capture_on_commit_callbacks,
 ):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
     di_upload = DICOMImageSetUploadFactory()
     with (
         patch.object(
@@ -277,7 +276,12 @@ def test_start_dicom_import_job_does_not_run_when_deid_fails(
 
 
 @pytest.mark.django_db
-def test_error_in_start_dicom_import_job(django_capture_on_commit_callbacks):
+def test_error_in_start_dicom_import_job(
+    settings, django_capture_on_commit_callbacks
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
     di_upload = DICOMImageSetUploadFactory()
 
     with (
@@ -313,8 +317,11 @@ def test_error_in_start_dicom_import_job(django_capture_on_commit_callbacks):
 
 @pytest.mark.django_db
 def test_start_dicom_import_job_sets_error_message_when_deid_fails(
-    django_capture_on_commit_callbacks, mocker
+    settings, django_capture_on_commit_callbacks, mocker
 ):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
     di_upload = DICOMImageSetUploadFactory()
 
     mock_qs = mocker.MagicMock()
