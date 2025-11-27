@@ -570,12 +570,12 @@ def import_dicom_to_health_imaging(*, dicom_imageset_upload_pk):
         botocore.exceptions.EndpointConnectionError,
         health_imaging_client.exceptions.ThrottlingException,
         health_imaging_client.exceptions.ServiceQuotaExceededException,
-    ) as e:
-        raise RetryStep from e
-    except RejectedDICOMFileError as e:
-        _handle_error(error_message=e.justification)
-    except Exception as e:
-        logger.error(e, exc_info=True)
+    ) as error:
+        raise RetryStep from error
+    except RejectedDICOMFileError as error:
+        _handle_error(error_message=error.justification)
+    except Exception as error:
+        logger.error(error, exc_info=True)
         _handle_error(error_message="An unexpected error occurred")
     else:
         upload.status = DICOMImageSetUploadStatusChoices.STARTED
@@ -666,19 +666,19 @@ def handle_health_imaging_import_job_event(*, event):
         botocore.exceptions.EndpointConnectionError,
         health_imaging_client.exceptions.ThrottlingException,
         health_imaging_client.exceptions.ServiceQuotaExceededException,
-    ) as e:
-        raise RetryStep from e
-    except health_imaging_client.exceptions.ConflictException as e:
+    ) as error:
+        raise RetryStep from error
+    except health_imaging_client.exceptions.ConflictException as error:
         if (
             "Requested ImageSet metadata is not consistent yet. "
             "Please retry after a few seconds."
-            in e.response["Error"]["Message"]
+            in error.response["Error"]["Message"]
         ):
-            raise RetryStep from e
+            raise RetryStep from error
         else:
-            _handle_error(error=e)
-    except Exception as e:
-        _handle_error(error=e)
+            _handle_error(error=error)
+    except Exception as error:
+        _handle_error(error=error)
 
 
 @acks_late_micro_short_task(retry_on=(RetryStep,))
@@ -696,8 +696,8 @@ def delete_health_imaging_image_set(*, image_set_id):
         )
     except health_imaging_client.exceptions.ResourceNotFoundException:
         pass  # image set already deleted
-    except health_imaging_client.exceptions.ThrottlingException as e:
-        raise RetryStep("Request throttled") from e
+    except health_imaging_client.exceptions.ThrottlingException as error:
+        raise RetryStep("Request throttled") from error
 
 
 @acks_late_micro_short_task
