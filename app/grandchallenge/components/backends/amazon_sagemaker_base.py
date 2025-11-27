@@ -704,7 +704,7 @@ class AmazonSageMakerBaseExecutor(Executor, ABC):
                 self.get_job_params(
                     job_name=self.get_job_name(event=event)
                 ).attempt
-                < 3
+                < 1
             ):
                 raise RetryTask("Retrying due to internal server error")
             else:
