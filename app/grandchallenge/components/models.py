@@ -2663,7 +2663,7 @@ class CIVForObjectMixin:
                 creator=user,
                 name=dicom_upload_with_name.name,
                 linked_object=self,
-                linked_socket=ci,
+                linked_socket_slug=ci.slug,
             )
             upload.task_on_success = add_image_to_object.signature(
                 kwargs={

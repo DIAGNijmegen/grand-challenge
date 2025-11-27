@@ -1181,10 +1181,9 @@ class DICOMImageSetUpload(UUIDModel):
     linked_object = GenericForeignKey(
         "linked_object_content_type", "linked_object_object_id"
     )
-    linked_socket = models.ForeignKey(
-        to="components.ComponentInterface",
-        null=True,
-        on_delete=models.SET_NULL,
+    linked_socket_slug = models.CharField(
+        max_length=255,
+        blank=True,
     )
 
     class Meta:

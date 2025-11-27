@@ -598,8 +598,16 @@ def handle_dicom_import_error(
 
     error_handler = upload.get_error_handler()
 
+    try:
+        ci = ComponentInterface.objects.get(slug=upload.linked_socket_slug)
+    except ObjectDoesNotExist:
+        logger.info(
+            f"Linked socket {upload.linked_socket_slug} does not exist"
+        )
+        ci = None
+
     error_handler.handle_error(
-        interface=upload.linked_socket,
+        interface=ci,
         error_message=error_message,
     )
 
