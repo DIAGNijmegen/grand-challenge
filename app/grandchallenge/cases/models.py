@@ -1169,21 +1169,18 @@ class DICOMImageSetUpload(UUIDModel):
     )
     linked_object_content_type = models.ForeignKey(
         ContentType,
-        blank=True,
+        editable=False,
         null=True,
         related_name="dicomimagesetupload_linked_object",
-        on_delete=models.CASCADE,
-        db_index=True,
+        on_delete=models.SET_NULL,
     )
-    linked_object_object_id = models.CharField(
-        max_length=255, blank=True, null=True, db_index=True
-    )
+    linked_object_object_id = models.UUIDField(editable=False, null=True)
     linked_object = GenericForeignKey(
         "linked_object_content_type", "linked_object_object_id"
     )
     linked_socket_slug = models.CharField(
         max_length=255,
-        blank=True,
+        editable=False,
     )
 
     class Meta:
