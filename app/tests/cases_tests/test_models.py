@@ -307,7 +307,7 @@ def test_validate_image_set_no_generated_image_set(mocker, import_job_summary):
     )
     mocker.patch.object(di_upload, "get_job_summary", return_value=job_summary)
     mock_get_failure_log = mocker.patch.object(
-        di_upload, "get_job_output_failure_log"
+        di_upload, "get_job_output_failure_log", return_value=[]
     )
 
     with pytest.raises(RuntimeError) as error:

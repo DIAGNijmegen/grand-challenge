@@ -2660,7 +2660,10 @@ class CIVForObjectMixin:
                     f"queryset for interface {ci}"
                 )
             upload = DICOMImageSetUpload(
-                creator=user, name=dicom_upload_with_name.name
+                creator=user,
+                name=dicom_upload_with_name.name,
+                linked_object=self,
+                linked_socket_pk=ci.pk,
             )
             upload.task_on_success = add_image_to_object.signature(
                 kwargs={

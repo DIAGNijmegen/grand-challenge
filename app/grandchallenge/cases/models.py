@@ -14,6 +14,8 @@ from botocore.awsrequest import AWSRequest
 from botocore.exceptions import ClientError
 from celery import signature
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, SuspiciousFileOperation
 from django.db import models
 from django.db.models.signals import post_delete
@@ -38,6 +40,7 @@ from pydantic.dataclasses import dataclass
 from storages.utils import clean_name
 
 from grandchallenge.core.error_handlers import (
+    DICOMImageSetUploadErrorHandler,
     RawImageUploadSessionErrorHandler,
 )
 from grandchallenge.core.guardian import (
@@ -1164,6 +1167,21 @@ class DICOMImageSetUpload(UUIDModel):
         editable=False,
         help_text="Serialized task that is run on job success",
     )
+    linked_object_content_type = models.ForeignKey(
+        ContentType,
+        editable=False,
+        null=True,
+        related_name="dicomimagesetupload_linked_object",
+        on_delete=models.SET_NULL,
+    )
+    linked_object_object_id = models.UUIDField(editable=False, null=True)
+    linked_object = GenericForeignKey(
+        "linked_object_content_type", "linked_object_object_id"
+    )
+    linked_socket_pk = models.IntegerField(
+        editable=False,
+        null=True,
+    )
 
     class Meta:
         verbose_name = "DICOM image set upload"
@@ -1175,7 +1193,15 @@ class DICOMImageSetUpload(UUIDModel):
                 name="dicomuimagesetupload_status_valid",
             )
         ]
-        indexes = (models.Index(fields=["status"]),)
+        indexes = (
+            models.Index(fields=["status"]),
+            models.Index(
+                fields=[
+                    "linked_object_content_type",
+                    "linked_object_object_id",
+                ]
+            ),
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1408,31 +1434,12 @@ class DICOMImageSetUpload(UUIDModel):
 
         return [json.loads(line) for line in obj["Body"].iter_lines()]
 
-    def handle_event(self, *, event):
-        try:
-            job_status = event["jobStatus"]
-            job_summary = self.get_job_summary(event=event)
-            if job_status == "COMPLETED":
-                self.handle_completed_job(job_summary=job_summary)
-            elif job_status == "FAILED":
-                self.handle_failed_job(job_summary=job_summary)
-            else:
-                raise ValueError("Invalid job status")
-        except Exception as e:
-            self.mark_failed(
-                error_message="An unexpected error occurred", exc=e
-            )
-        else:
-            self.status = self.DICOMImageSetUploadStatusChoices.COMPLETED
-            self.save()
-            self.execute_task_on_success()
-        finally:
-            self.delete_input_files()
-
     def handle_completed_job(self, *, job_summary):
-        self.validate_image_set(job_summary=job_summary)
         image_set_id = job_summary.image_sets_summary[0].image_set_id
         self.convert_image_set_to_internal(image_set_id=image_set_id)
+        self.status = self.DICOMImageSetUploadStatusChoices.COMPLETED
+        self.save()
+        self.execute_task_on_success()
 
     def validate_image_set(self, *, job_summary):
         if (
@@ -1521,6 +1528,26 @@ class DICOMImageSetUpload(UUIDModel):
     def get_absolute_url(self):
         return reverse(
             "cases:dicom-image-set-upload-detail", kwargs={"pk": self.pk}
+        )
+
+    def get_error_handler(self):
+        return DICOMImageSetUploadErrorHandler(
+            dicom_image_set_upload=self,
+            linked_object=self.linked_object,
+        )
+
+    def handle_error(self, *, error_message):
+        from grandchallenge.cases.tasks import handle_dicom_import_error
+
+        self.user_uploads.all().delete()
+        self.delete_input_files()
+        on_commit(
+            handle_dicom_import_error.signature(
+                kwargs={
+                    "dicom_imageset_upload_pk": self.pk,
+                    "error_message": error_message,
+                }
+            ).apply_async
         )
 
 

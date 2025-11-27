@@ -558,22 +558,47 @@ def import_dicom_to_health_imaging(*, dicom_imageset_upload_pk):
         botocore.exceptions.EndpointConnectionError,
         health_imaging_client.exceptions.ThrottlingException,
         health_imaging_client.exceptions.ServiceQuotaExceededException,
-    ) as e:
-        raise RetryStep from e
-    except RejectedDICOMFileError as e:
-        upload.mark_failed(error_message=e.justification)
-        upload.user_uploads.all().delete()
-        upload.delete_input_files()
-    except Exception as e:
-        upload.mark_failed(error_message="An unexpected error occurred", exc=e)
-        upload.user_uploads.all().delete()
-        upload.delete_input_files()
+    ) as error:
+        raise RetryStep from error
+    except RejectedDICOMFileError as error:
+        upload.handle_error(error_message=error.justification)
+    except Exception as error:
+        logger.error(error, exc_info=True)
+        upload.handle_error(error_message="An unexpected error occurred")
     else:
         upload.status = DICOMImageSetUploadStatusChoices.STARTED
         upload.save()
 
 
-@acks_late_micro_short_task(retry_on=(LockNotAcquiredException,))
+@acks_late_micro_short_task(
+    retry_on=(LockNotAcquiredException,), delayed_retry=False
+)
+@transaction.atomic
+def handle_dicom_import_error(
+    *,
+    dicom_imageset_upload_pk,
+    error_message,
+):
+    with check_lock_acquired():
+        upload = DICOMImageSetUpload.objects.select_for_update(
+            nowait=True
+        ).get(pk=dicom_imageset_upload_pk)
+
+    error_handler = upload.get_error_handler()
+
+    try:
+        ci = ComponentInterface.objects.get(pk=upload.linked_socket_pk)
+    except ObjectDoesNotExist:
+        logger.info(f"Linked socket {upload.linked_socket_pk} does not exist")
+        ci = None
+
+    error_handler.handle_error(
+        interface=ci,
+        error_message=error_message,
+    )
+
+
+@acks_late_micro_short_task(retry_on=(LockNotAcquiredException, RetryStep))
 @transaction.atomic
 def handle_health_imaging_import_job_event(*, event):
     job_name = event["jobName"]
@@ -590,7 +615,46 @@ def handle_health_imaging_import_job_event(*, event):
     if upload.status != DICOMImageSetUploadStatusChoices.STARTED:
         return
 
-    upload.handle_event(event=event)
+    health_imaging_client = boto3.client(
+        "medical-imaging",
+        region_name=settings.AWS_DEFAULT_REGION,
+    )
+
+    try:
+        job_status = event["jobStatus"]
+        job_summary = upload.get_job_summary(event=event)
+
+        if job_status == "COMPLETED":
+            upload.validate_image_set(job_summary=job_summary)
+            upload.handle_completed_job(job_summary=job_summary)
+        elif job_status == "FAILED":
+            upload.handle_failed_job(job_summary=job_summary)
+            logger.error(
+                f"Import job {job_summary.job_id} failed for DICOMImageSetUpload {upload.pk}"
+            )
+        else:
+            raise ValueError("Invalid job status")
+
+        upload.delete_input_files()
+    except (
+        botocore.exceptions.EndpointConnectionError,
+        health_imaging_client.exceptions.ThrottlingException,
+        health_imaging_client.exceptions.ServiceQuotaExceededException,
+    ) as error:
+        raise RetryStep from error
+    except health_imaging_client.exceptions.ConflictException as error:
+        if (
+            "Requested ImageSet metadata is not consistent yet. "
+            "Please retry after a few seconds."
+            in error.response["Error"]["Message"]
+        ):
+            raise RetryStep from error
+        else:
+            logger.error(error, exc_info=True)
+            upload.handle_error(error_message="An unexpected error occurred")
+    except Exception as error:
+        logger.error(error, exc_info=True)
+        upload.handle_error(error_message="An unexpected error occurred")
 
 
 @acks_late_micro_short_task(retry_on=(RetryStep,))
@@ -608,8 +672,8 @@ def delete_health_imaging_image_set(*, image_set_id):
         )
     except health_imaging_client.exceptions.ResourceNotFoundException:
         pass  # image set already deleted
-    except health_imaging_client.exceptions.ThrottlingException as e:
-        raise RetryStep("Request throttled") from e
+    except health_imaging_client.exceptions.ThrottlingException as error:
+        raise RetryStep("Request throttled") from error
 
 
 @acks_late_micro_short_task

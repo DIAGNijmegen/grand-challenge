@@ -17,6 +17,7 @@ from grandchallenge.cases.models import (
     DICOMImageSetUploadStatusChoices,
     Image,
     ImageFile,
+    JobSummary,
     PostProcessImageTask,
     PostProcessImageTaskStatusChoices,
 )
@@ -24,13 +25,20 @@ from grandchallenge.cases.tasks import (
     POST_PROCESSORS,
     _check_post_processor_result,
     execute_post_process_image_task,
+    handle_health_imaging_import_job_event,
     import_dicom_to_health_imaging,
     import_images,
 )
+from grandchallenge.components.models import (
+    ComponentInterfaceValue,
+    InterfaceKindChoices,
+)
 from grandchallenge.core.celery import acks_late_micro_short_task
 from grandchallenge.core.storage import protected_s3_storage
+from tests.algorithms_tests.factories import AlgorithmJobFactory
 from tests.cases_tests import RESOURCE_PATH
 from tests.cases_tests.factories import DICOMImageSetUploadFactory
+from tests.components_tests.factories import ComponentInterfaceFactory
 from tests.factories import ImageFactory
 from tests.utils import create_raw_upload_image_session
 
@@ -222,9 +230,7 @@ def test_import_dicom_to_health_imaging_for_not_pending_upload():
 
 
 @pytest.mark.django_db
-def test_import_dicom_to_health_imaging_updates_status_when_successful(
-    django_capture_on_commit_callbacks,
-):
+def test_import_dicom_to_health_imaging_updates_status_when_successful():
     di_upload = DICOMImageSetUploadFactory()
     with (
         patch.object(
@@ -232,10 +238,7 @@ def test_import_dicom_to_health_imaging_updates_status_when_successful(
         ) as mocked_import_method,
         patch.object(DICOMImageSetUpload, "deidentify_user_uploads"),
     ):
-        with django_capture_on_commit_callbacks(execute=True):
-            import_dicom_to_health_imaging(
-                dicom_imageset_upload_pk=di_upload.pk
-            )
+        import_dicom_to_health_imaging(dicom_imageset_upload_pk=di_upload.pk)
 
         mocked_import_method.assert_called_once()
 
@@ -245,8 +248,12 @@ def test_import_dicom_to_health_imaging_updates_status_when_successful(
 
 @pytest.mark.django_db
 def test_start_dicom_import_job_does_not_run_when_deid_fails(
+    settings,
     django_capture_on_commit_callbacks,
 ):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
     di_upload = DICOMImageSetUploadFactory()
     with (
         patch.object(
@@ -277,7 +284,12 @@ def test_start_dicom_import_job_does_not_run_when_deid_fails(
 
 
 @pytest.mark.django_db
-def test_error_in_start_dicom_import_job(django_capture_on_commit_callbacks):
+def test_error_in_start_dicom_import_job(
+    settings, django_capture_on_commit_callbacks
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
     di_upload = DICOMImageSetUploadFactory()
 
     with (
@@ -313,8 +325,11 @@ def test_error_in_start_dicom_import_job(django_capture_on_commit_callbacks):
 
 @pytest.mark.django_db
 def test_start_dicom_import_job_sets_error_message_when_deid_fails(
-    django_capture_on_commit_callbacks, mocker
+    settings, django_capture_on_commit_callbacks, mocker
 ):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
     di_upload = DICOMImageSetUploadFactory()
 
     mock_qs = mocker.MagicMock()
@@ -349,3 +364,235 @@ def test_start_dicom_import_job_sets_error_message_when_deid_fails(
     # upload gets marked as failed
     assert di_upload.status == DICOMImageSetUploadStatusChoices.FAILED
     assert di_upload.error_message == "Foo"
+
+
+def import_job_summary(*, di_upload, **kwargs):
+    job_summary_data = {
+        "jobId": "381d850256f30b24358c0a3d9e389670",
+        "datastoreId": "bbc4f3cccbae4095a34170fddc19b13d",
+        "inputS3Uri": f"s3://healthimaging/inputs/{di_upload.pk}/",
+        "outputS3Uri": "s3://healthimaging/logs/bbc4f3cccbae4095a34170fddc19b13d-DicomImport-3d8e036cc21a83e10bbb98c9d29258a5/",
+        "successOutputS3Uri": "s3://healthimaging/logs/bbc4f3cccbae4095a34170fddc19b13d-DicomImport-3d8e036cc21a83e10bbb98c9d29258a5/SUCCESS/",
+        "failureOutputS3Uri": "s3://healthimaging/logs/bbc4f3cccbae4095a34170fddc19b13d-DicomImport-3d8e036cc21a83e10bbb98c9d29258a5/FAILURE/",
+        "numberOfScannedFiles": 1,
+        "numberOfImportedFiles": 1,
+        "numberOfFilesWithCustomerError": 0,
+        "numberOfFilesWithServerError": 0,
+        "numberOfGeneratedImageSets": 1,
+        "imageSetsSummary": [
+            {
+                "imageSetId": "e616d1f717da6f80fed6271ad184b7f0",
+                "imageSetVersion": 1,
+                "isPrimary": True,
+                "numberOfMatchedSOPInstances": 1,
+            }
+        ],
+    }
+    job_summary_data.update(kwargs)
+    return JobSummary(**job_summary_data)
+
+
+@pytest.mark.django_db
+def test_handle_health_imaging_import_job_event_completed_and_valid(
+    settings, django_capture_on_commit_callbacks, mocker
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
+    di_upload = DICOMImageSetUploadFactory(
+        status=DICOMImageSetUploadStatusChoices.STARTED
+    )
+    job_event = {
+        "jobName": di_upload._import_job_name,
+        "jobStatus": "COMPLETED",
+    }
+    mocker.patch.object(
+        DICOMImageSetUpload,
+        "get_job_summary",
+        return_value=import_job_summary(di_upload=di_upload),
+    )
+    mock_convert_image_set_to_internal = mocker.patch.object(
+        DICOMImageSetUpload, "convert_image_set_to_internal"
+    )
+    mock_delete_input_files = mocker.patch.object(
+        DICOMImageSetUpload, "delete_input_files"
+    )
+
+    with django_capture_on_commit_callbacks(execute=True):
+        handle_health_imaging_import_job_event(
+            event=job_event,
+        )
+    di_upload.refresh_from_db()
+
+    mock_convert_image_set_to_internal.assert_called_once()
+    mock_delete_input_files.assert_called_once()
+    assert di_upload.status == DICOMImageSetUploadStatusChoices.COMPLETED
+
+
+@pytest.mark.django_db
+def test_handle_health_imaging_import_job_event_failed_status(
+    settings, django_capture_on_commit_callbacks, mocker
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
+    di_upload = DICOMImageSetUploadFactory(
+        status=DICOMImageSetUploadStatusChoices.STARTED
+    )
+    job_event = {
+        "jobName": di_upload._import_job_name,
+        "jobStatus": "FAILED",
+    }
+    mocker.patch.object(
+        DICOMImageSetUpload,
+        "get_job_summary",
+        return_value=import_job_summary(di_upload=di_upload),
+    )
+    mock_delete_input_files = mocker.patch.object(
+        DICOMImageSetUpload, "delete_input_files"
+    )
+
+    with django_capture_on_commit_callbacks(execute=True):
+        handle_health_imaging_import_job_event(
+            event=job_event,
+        )
+    di_upload.refresh_from_db()
+
+    mock_delete_input_files.assert_called_once()
+    assert di_upload.status == DICOMImageSetUploadStatusChoices.FAILED
+    assert di_upload.error_message == "An unexpected error occurred"
+
+
+@pytest.mark.django_db
+def test_handle_health_imaging_import_job_event_invalid_status(
+    settings, django_capture_on_commit_callbacks, mocker
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
+    di_upload = DICOMImageSetUploadFactory(
+        status=DICOMImageSetUploadStatusChoices.STARTED
+    )
+    job_event = {
+        "jobName": di_upload._import_job_name,
+        "jobStatus": "IN_PROGRESS",
+    }
+    mocker.patch.object(
+        DICOMImageSetUpload,
+        "get_job_summary",
+        return_value=import_job_summary(di_upload=di_upload),
+    )
+    mock_delete_input_files = mocker.patch.object(
+        DICOMImageSetUpload, "delete_input_files"
+    )
+
+    with django_capture_on_commit_callbacks(execute=True):
+        handle_health_imaging_import_job_event(
+            event=job_event,
+        )
+    di_upload.refresh_from_db()
+
+    mock_delete_input_files.assert_called_once()
+    assert di_upload.status == DICOMImageSetUploadStatusChoices.FAILED
+    assert di_upload.error_message == "An unexpected error occurred"
+
+
+@pytest.mark.django_db
+def test_handle_health_imaging_import_job_event_invalid_import(
+    settings, django_capture_on_commit_callbacks, mocker
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
+    di_upload = DICOMImageSetUploadFactory(
+        status=DICOMImageSetUploadStatusChoices.STARTED
+    )
+    job_event = {
+        "jobName": di_upload._import_job_name,
+        "jobStatus": "COMPLETED",
+    }
+    mocker.patch.object(
+        DICOMImageSetUpload,
+        "get_job_summary",
+        return_value=import_job_summary(
+            di_upload=di_upload,
+            **{
+                "numberOfScannedFiles": 1,
+                "numberOfImportedFiles": 0,
+                "numberOfFilesWithCustomerError": 1,
+                "numberOfFilesWithServerError": 0,
+                "numberOfGeneratedImageSets": 0,
+                "imageSetsSummary": [],
+            },
+        ),
+    )
+    mock_delete_input_files = mocker.patch.object(
+        DICOMImageSetUpload, "delete_input_files"
+    )
+
+    with django_capture_on_commit_callbacks(execute=True):
+        handle_health_imaging_import_job_event(
+            event=job_event,
+        )
+    di_upload.refresh_from_db()
+
+    mock_delete_input_files.assert_called_once()
+    assert di_upload.status == DICOMImageSetUploadStatusChoices.FAILED
+    assert di_upload.error_message == "An unexpected error occurred"
+
+
+@acks_late_micro_short_task
+def some_async_task(foo):
+    return foo
+
+
+@pytest.mark.django_db
+def test_handle_health_imaging_import_job_event_marks_job_as_failed_on_validation_fail(
+    settings,
+    django_capture_on_commit_callbacks,
+    mocker,
+):
+    settings.task_eager_propagates = (True,)
+    settings.task_always_eager = (True,)
+
+    obj = AlgorithmJobFactory(time_limit=10)
+    ci = ComponentInterfaceFactory(kind=InterfaceKindChoices.DICOM_IMAGE_SET)
+    di_upload = DICOMImageSetUploadFactory(
+        status=DICOMImageSetUploadStatusChoices.STARTED,
+        linked_object=obj,
+        linked_socket_pk=ci.pk,
+        task_on_success=some_async_task.signature(
+            kwargs={"foo": "bar"}, immutable=True
+        ),
+    )
+    import_job_event = {
+        "jobName": di_upload._import_job_name,
+        "jobStatus": "FAILED",
+    }
+    mocker.patch.object(
+        DICOMImageSetUpload,
+        "get_job_summary",
+        return_value=import_job_summary(di_upload=di_upload),
+    )
+    mock_delete_input_files = mocker.patch.object(
+        DICOMImageSetUpload, "delete_input_files"
+    )
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        handle_health_imaging_import_job_event(
+            event=import_job_event,
+        )
+    di_upload.refresh_from_db()
+    obj.refresh_from_db()
+
+    mock_delete_input_files.assert_called_once()
+    assert di_upload.status == DICOMImageSetUploadStatusChoices.FAILED
+    assert (
+        di_upload.error_message
+        == f"Image validation for socket {ci.title} failed with error: An unexpected error occurred"
+    )
+    assert ComponentInterfaceValue.objects.filter(interface=ci).count() == 0
+    assert obj.status == obj.CANCELLED
+    assert obj.error_message == "One or more of the inputs failed validation."
+    assert "An unexpected error occurred" in str(obj.detailed_error_message)
+    assert "some_async_task" not in str(callbacks)
