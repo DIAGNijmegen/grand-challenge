@@ -1193,7 +1193,15 @@ class DICOMImageSetUpload(UUIDModel):
                 name="dicomuimagesetupload_status_valid",
             )
         ]
-        indexes = (models.Index(fields=["status"]),)
+        indexes = (
+            models.Index(fields=["status"]),
+            models.Index(
+                fields=[
+                    "linked_object_content_type",
+                    "linked_object_object_id",
+                ]
+            ),
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
