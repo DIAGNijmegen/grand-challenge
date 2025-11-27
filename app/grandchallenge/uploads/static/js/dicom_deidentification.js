@@ -113,27 +113,6 @@ function getDummyValue(vr) {
     }
 }
 
-// Helper to check if a file is a DICOM file by extension or magic byte
-async function isDicomFile(file) {
-    const dicomExtensions = [".dcm", ".dicom"];
-    if (!dicomExtensions.some(ext => file.name.toLowerCase().endsWith(ext))) {
-        return false;
-    }
-
-    // Check magic byte: DICOM files have "DICM" at byte offset 128
-    const header = new Uint8Array(
-        await file.data.slice(128, 132).arrayBuffer(),
-    );
-    const isDicomMagic =
-        header.length === 4 &&
-        header[0] === 0x44 && // 'D'
-        header[1] === 0x49 && // 'I'
-        header[2] === 0x43 && // 'C'
-        header[3] === 0x4d; // 'M'
-
-    return isDicomMagic;
-}
-
 const uidMap = new Map(); // Map to store unique identifiers for UIDs
 
 // Recursive de-identification for a dataset (object with DICOM tags)
@@ -325,7 +304,10 @@ async function preprocessDicomFile(file) {
     const dicomData = dcmjs.data.DicomMessage.readFile(arrayBuffer);
     const originalDataset = dicomData.dict;
     const sopClassUID = originalDataset["00080016"]?.Value?.[0] || "";
-    const protocol = globalThis.GrandChallengeDICOMDeIdProcedure || {};
+    const protocol = globalThis.GrandChallengeDICOMDeIdProcedure;
+    if (typeof protocol === "undefined") {
+        throw new Error("Protocol is not loaded");
+    }
     const sopClassRules = protocol.sopClass?.[sopClassUID] || {};
     const tagRules = sopClassRules.tag || {};
     const defaultAction = sopClassRules.default || protocol.default || "X";
@@ -350,36 +332,10 @@ async function preprocessDicomFile(file) {
     return new File([newBuffer], file.name, { type: file.type });
 }
 
-/**
- * Registers file preprocessors used by Uppy to preprocess files.
- *
- * Each preprocessor object in the array must have the following properties:
- *
- * @property {function(File): Promise<boolean>} fileMatcher - An asynchronous
- * function that takes a File object as input and returns a Promise that
- * resolves tot a boolean indicating whether the file should be processed by
- * this preprocessor. Typically, this function checks the file extension or
- * inspects the file contents to determine if it matches the expected file
- * type (e.g., DICOM).
- *
- * @property {function(File): Promise<File>} preprocessor - An asynchronous
- * function that takes a File object as input and returns a Promise that
- * resolves to a new, processed File object. This function performs any
- * necessary preprocessing (such as de-identification, conversion, or
- * validation) before the file is uploaded or further handled by Uppy.
- */
-globalThis.UPPY_FILE_PREPROCESSORS = [
-    {
-        fileMatcher: isDicomFile,
-        preprocessor: preprocessDicomFile,
-    },
-];
-
 // Export for testing in Node.js environment
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         getDummyValue,
-        isDicomFile,
         preprocessDicomFile,
         // For testing only
         _uidMap: uidMap,

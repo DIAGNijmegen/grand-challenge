@@ -42,11 +42,23 @@ class UserUploadMultipleWidget(UserUploadWidgetMixin, MultipleHiddenInput):
 class DICOMUserUploadMultipleWidget(UserUploadMultipleWidget):
     class Media:
         js = (
+            "vendored/@diagnijmegen/rse-grand-challenge-dicom-de-id-procedure/dist/grand-challenge-dicom-de-id-procedure.umd.min.js",
             "vendored/dcmjs/build/dcmjs.min.js",
-            "js/file_preprocessors.js",
+            "js/dicom_deidentification.js",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            *args,
+            allowed_file_types=(
+                "application/dicom",
+                "application/octet-stream",  # many dicom files have this
+            ),
+            **kwargs,
         )
 
     def get_context(self, *args, **kwargs):
         context = super().get_context(*args, **kwargs)
         context["widget"]["attrs"]["max_number_files"] = 2000
+        context["widget"]["type"] = "dicom"
         return context

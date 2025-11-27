@@ -24,10 +24,11 @@
             document.getElementById(`${inputId}AllowedFileTypes`).textContent,
         );
         const maxNumberOfFiles = widget.getAttribute("data-max-number-files");
+        const isDicomWidget = widget.dataset.type === "dicom";
 
         const uppy = new Uppy.Core({
             id: `${window.location.pathname}-${inputId}`,
-            autoProceed: true,
+            autoProceed: !isDicomWidget,
             restrictions: {
                 maxNumberOfFiles: maxNumberOfFiles,
                 allowedFileTypes,
@@ -99,22 +100,28 @@
             fileList.prepend(newFile);
         });
 
-        uppy.on("file-added", async file => {
-            if (globalThis.UPPY_FILE_PREPROCESSORS) {
-                for (const preprocessor of globalThis.UPPY_FILE_PREPROCESSORS) {
-                    if (await preprocessor.fileMatcher(file)) {
-                        try {
-                            const processedFile =
-                                await preprocessor.preprocessor(file.data);
-                            uppy.setFileState(file.id, { data: processedFile });
-                        } catch (e) {
-                            uppy.removeFile(file.id);
-                        }
-                        return;
-                    }
+        if (isDicomWidget) {
+            // Use the file-added event instead of registering a preprocessor function with `uppy.addPreProcessor()`
+            // so we can deal with the raw file blob, instead of the uppy mutated file data.
+            uppy.on("file-added", async file => {
+                try {
+                    const processedFile = await preprocessDicomFile(file.data);
+                    uppy.setFileState(file.id, { data: processedFile });
+                } catch (e) {
+                    window.alert(
+                        `Could not upload ${file.name} (${file.type}): ${e.message}`,
+                    );
+                    // `autoProceed` must be set to `false` to avoid race condition here. Otherwise, removeFile may get
+                    // called before uppy file initialization is complete, leading to errors.
+                    uppy.removeFile(file.id);
                 }
-            }
-        });
+
+                // Auto-upload after preprocessing
+                if (uppy.getFile(file.id)) {
+                    uppy.upload().catch(err => console.error(err));
+                }
+            });
+        }
     }
 
     function getCookie(name) {
