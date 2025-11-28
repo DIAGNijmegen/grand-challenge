@@ -693,6 +693,20 @@ class ComponentInterface(FieldChangeMixin, OverlaySegmentsMixin):
                 pass
         return value_required
 
+    @cached_property
+    def forge_model(self):
+        from grandchallenge.forge.models import ForgeSocket
+
+        return ForgeSocket(
+            slug=self.slug,
+            kind=self.get_kind_display(),
+            super_kind=self.super_kind.label,
+            relative_path=self.relative_path,
+            example_value=(
+                self.json_kind_example.value if self.is_json_kind else None
+            ),
+        )
+
     class Meta:
         ordering = ("pk",)
 

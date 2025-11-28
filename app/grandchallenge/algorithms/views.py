@@ -91,9 +91,6 @@ from grandchallenge.core.guardian import (
 )
 from grandchallenge.core.templatetags.bleach import clean
 from grandchallenge.core.templatetags.random_encode import random_encode
-from grandchallenge.core.utils.grand_challenge_forge import (
-    get_forge_algorithm_template_context,
-)
 from grandchallenge.core.views import PermissionRequestUpdate
 from grandchallenge.datatables.views import Column, PaginatedTableListView
 from grandchallenge.evaluation.models import Evaluation
@@ -1145,12 +1142,10 @@ class AlgorithmImageTemplate(ObjectPermissionRequiredMixin, DetailView):
     def get(self, *_, **__):
         algorithm = self.get_object()
 
-        forge_context = get_forge_algorithm_template_context(algorithm)
-
         buffer = io.BytesIO()
         with ZipFile(buffer, "w") as zipf:
             generate_algorithm_template(
-                context=forge_context,
+                algorithm=algorithm.forge_model,
                 output_zip_file=zipf,
                 target_zpath=Path(""),
             )
