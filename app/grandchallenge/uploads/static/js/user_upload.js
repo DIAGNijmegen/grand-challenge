@@ -28,7 +28,7 @@
 
         const uppy = new Uppy.Core({
             id: `${window.location.pathname}-${inputId}`,
-            autoProceed: !isDicomWidget,
+            autoProceed: true,
             restrictions: {
                 maxNumberOfFiles: maxNumberOfFiles,
                 allowedFileTypes,
@@ -101,26 +101,7 @@
         });
 
         if (isDicomWidget) {
-            // Use the file-added event instead of registering a preprocessor function with `uppy.addPreProcessor()`
-            // so we can deal with the raw file blob, instead of the uppy mutated file data.
-            uppy.on("file-added", async file => {
-                try {
-                    const processedFile = await preprocessDicomFile(file.data);
-                    uppy.setFileState(file.id, { data: processedFile });
-                } catch (e) {
-                    window.alert(
-                        `Could not upload ${file.name} (${file.type}): ${e.message}`,
-                    );
-                    // `autoProceed` must be set to `false` to avoid race condition here. Otherwise, removeFile may get
-                    // called before uppy file initialization is complete, leading to errors.
-                    uppy.removeFile(file.id);
-                }
-
-                // Auto-upload after preprocessing
-                if (uppy.getFile(file.id)) {
-                    uppy.upload().catch(err => console.error(err));
-                }
-            });
+            uppy.use(DicomDeidentifierPlugin, {});
         }
     }
 
