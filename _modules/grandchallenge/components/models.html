@@ -751,6 +751,20 @@
                 <span class="k">pass</span>
         <span class="k">return</span> <span class="n">value_required</span>
 
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forge_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">grandchallenge.forge.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ForgeSocket</span>
+
+        <span class="k">return</span> <span class="n">ForgeSocket</span><span class="p">(</span>
+            <span class="n">slug</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">slug</span><span class="p">,</span>
+            <span class="n">kind</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_kind_display</span><span class="p">(),</span>
+            <span class="n">super_kind</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">super_kind</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
+            <span class="n">relative_path</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">relative_path</span><span class="p">,</span>
+            <span class="n">example_value</span><span class="o">=</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">json_kind_example</span><span class="o">.</span><span class="n">value</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_json_kind</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
     <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
         <span class="n">ordering</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;pk&quot;</span><span class="p">,)</span></div>
 
