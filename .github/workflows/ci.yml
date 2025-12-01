@@ -59,10 +59,13 @@ jobs:
               run: |
                 sudo apt-get update
                 sudo apt-get install -y libcurl4-openssl-dev libssl-dev
-            - name: Pull the containers
+            - name: Pull the GPU container
               run: |
                 docker pull --platform=linux/amd64 \
                 public.ecr.aws/deep-learning-containers/pytorch-inference:2.6.0-gpu-py312-cu124-ubuntu22.04-sagemaker
+            - name: Pull the CPU container
+              run: |
+                docker pull --platform=linux/amd64 \
                 public.ecr.aws/deep-learning-containers/pytorch-inference:2.6.0-cpu-py312-ubuntu22.04-sagemaker
             - name: Run the forge integration tests
               run: |
