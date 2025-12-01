@@ -53,6 +53,13 @@ DEFAULT_PHASE_CONTEXT_STUB = {
                     "relative_path": "yet-another-non-json-input-value",
                     "example_value": None,
                 },
+                {
+                    "slug": "dicom-image-set-input-socket-slug",
+                    "kind": "DICOM Image Set",
+                    "super_kind": "Image",
+                    "relative_path": "images/dicom-image-set-input-value",
+                    "example_value": None,
+                },
             ],
             "outputs": [
                 {

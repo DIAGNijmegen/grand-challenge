@@ -35,19 +35,38 @@ def generate_socket_value_stub_file(*, output_zip_file, target_zpath, socket):
         return target_zpath
 
     # Copy over an example
-
     if socket.is_json:
-        source = FORGE_RESOURCES_PATH / "example.json"
+        output_zip_file.write(
+            FORGE_RESOURCES_PATH / "example.json",
+            arcname=str(target_zpath),
+        )
+    elif socket.is_dicom_image_set:
+        for indx, f in enumerate(
+            [  # Note: out of order on purpose: order should come from reading DICOM tags
+                "example_2.dcm",
+                "example_1.dcm",
+                "example_3.dcm",
+            ]
+        ):
+            assert (FORGE_RESOURCES_PATH / f).exists()
+            output_zip_file.write(
+                FORGE_RESOURCES_PATH / f,
+                arcname=str(
+                    target_zpath
+                    / f"1.2.826.0.1.3680043.10.1666.{indx + 1}.dcm"
+                ),
+            )
     elif socket.is_image:
-        source = FORGE_RESOURCES_PATH / "example.mha"
-        target_zpath = target_zpath / f"{str(uuid.uuid4())}.mha"
-    else:
-        source = FORGE_RESOURCES_PATH / "example.txt"
+        output_zip_file.write(
+            FORGE_RESOURCES_PATH / "example.mha",
+            arcname=str(target_zpath / f"{str(uuid.uuid4())}.mha"),
+        )
 
-    output_zip_file.write(
-        source,
-        arcname=str(target_zpath),
-    )
+    else:
+        output_zip_file.write(
+            FORGE_RESOURCES_PATH / "example.txt",
+            arcname=str(target_zpath),
+        )
 
     return target_zpath
 

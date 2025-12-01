@@ -1,4 +1,6 @@
-FROM --platform=linux/amd64 docker.io/library/python:3.11-slim AS example-evaluation-amd64
+FROM --platform=linux/amd64 public.ecr.aws/deep-learning-containers/pytorch-inference:2.6.0-cpu-py312-ubuntu22.04-sagemaker AS example_evaluation_amd64
+# When in need of a GPU, use the CUDA enabled: public.ecr.aws/deep-learning-containers/pytorch-inference:2.6.0-gpu-py312-cu124-ubuntu22.04-sagemaker
+# These are sourced from: https://gallery.ecr.aws/deep-learning-containers/pytorch-inference
 
 # Ensures that Python output to stdout/stderr is not buffered: prevents missing information when terminating
 ENV PYTHONUNBUFFERED=1

@@ -40,13 +40,23 @@ class ForgeSocket(BaseModel):
 
     @property
     def is_image(self):
-        return self.super_kind == ForgeSuperKindEnum.IMAGE
+        return (
+            self.super_kind == ForgeSuperKindEnum.IMAGE
+            and not self.is_dicom_image_set
+        )
 
     @property
     def is_file(self):
         return (
             self.super_kind == ForgeSuperKindEnum.FILE
             and not self.relative_path.endswith(".json")
+        )
+
+    @property
+    def is_dicom_image_set(self):
+        return (
+            self.super_kind == ForgeSuperKindEnum.IMAGE
+            and self.kind == ForgeKindEnum.DICOM_IMAGE_SET
         )
 
     @property

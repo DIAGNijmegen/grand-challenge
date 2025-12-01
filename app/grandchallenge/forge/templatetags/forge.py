@@ -14,6 +14,11 @@ def has_image(arg):
 
 
 @register.filter
+def has_dicom_image_set(arg):
+    return any(item.is_dicom_image_set for item in arg)
+
+
+@register.filter
 def is_string(arg):
     return isinstance(arg, str)
 
