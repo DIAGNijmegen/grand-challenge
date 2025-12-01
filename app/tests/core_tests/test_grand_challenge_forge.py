@@ -1,4 +1,5 @@
 import pytest
+from pydantic_core import MISSING
 
 from grandchallenge.components.models import ComponentInterface
 from grandchallenge.evaluation.utils import SubmissionKindChoices
@@ -71,7 +72,7 @@ def test_get_challenge_pack_context():
         example_values = [
             input.example_value
             for input in algorithm_interface.inputs
-            if input.example_value
+            if input.example_value is not MISSING
         ]
         assert example_values == [87]
 
