@@ -75,7 +75,7 @@ def socket_to_socket_value(socket):
     if socket.super_kind == ForgeSuperKindEnum.IMAGE:
         return ForgeSocketValue(
             image={
-                "name": "the_original_filename_of_the_file_that_was_uploaded.suffix",
+                "name": "the_original_filename_of_the_file_that_was_uploaded_or_image_set",
             },
             socket=socket,
         )

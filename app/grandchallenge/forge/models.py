@@ -4,6 +4,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, HttpUrl, RootModel
+from pydantic_core import MISSING
 
 from grandchallenge.components.models import (
     ComponentJob,
@@ -32,7 +33,7 @@ class ForgeSocket(BaseModel):
     relative_path: str
     kind: ForgeKindEnum
     super_kind: ForgeSuperKindEnum
-    example_value: Any = None
+    example_value: Any = MISSING
 
     @property
     def is_json(self):
@@ -61,8 +62,7 @@ class ForgeSocket(BaseModel):
 
     @property
     def has_example_value(self):
-        # TODO this does not allow for NULL example values
-        return self.example_value is not None
+        return self.example_value is not MISSING
 
 
 class ForgeInterface(BaseModel):

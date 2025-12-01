@@ -30,7 +30,6 @@ DEFAULT_PHASE_CONTEXT_STUB = {
                     "kind": "Segmentation",
                     "super_kind": "Image",
                     "relative_path": "images/input-value",
-                    "example_value": None,
                 },
                 {
                     "slug": "another-input-socket-slug",
@@ -51,14 +50,12 @@ DEFAULT_PHASE_CONTEXT_STUB = {
                     "kind": "Anything",
                     "super_kind": "File",
                     "relative_path": "yet-another-non-json-input-value",
-                    "example_value": None,
                 },
                 {
                     "slug": "dicom-image-set-input-socket-slug",
                     "kind": "DICOM Image Set",
                     "super_kind": "Image",
                     "relative_path": "images/dicom-image-set-input-value",
-                    "example_value": None,
                 },
             ],
             "outputs": [
@@ -67,7 +64,6 @@ DEFAULT_PHASE_CONTEXT_STUB = {
                     "kind": "Image",
                     "super_kind": "Image",
                     "relative_path": "images/output-value",
-                    "example_value": None,
                 },
                 {
                     "slug": "another-output-socket-slug",
@@ -88,7 +84,6 @@ DEFAULT_PHASE_CONTEXT_STUB = {
                     "kind": "Anything",
                     "super_kind": "File",
                     "relative_path": "yet-another-non-json-output-value",
-                    "example_value": None,
                 },
             ],
         },
@@ -99,7 +94,6 @@ DEFAULT_PHASE_CONTEXT_STUB = {
                     "kind": "Segmentation",
                     "super_kind": "Image",
                     "relative_path": "images/input-value",
-                    "example_value": None,
                 }
             ],
             "outputs": [
@@ -108,7 +102,6 @@ DEFAULT_PHASE_CONTEXT_STUB = {
                     "kind": "Image",
                     "super_kind": "Image",
                     "relative_path": "images/output-value",
-                    "example_value": None,
                 }
             ],
         },
@@ -119,7 +112,6 @@ DEFAULT_PHASE_CONTEXT_STUB = {
             "kind": "Segmentation",
             "super_kind": "Image",
             "relative_path": "images/input-value",
-            "example_value": None,
         },
         {
             "slug": "additional-another-input-socket-slug",
@@ -140,7 +132,6 @@ DEFAULT_PHASE_CONTEXT_STUB = {
             "kind": "Anything",
             "super_kind": "File",
             "relative_path": "yet-another-non-json-input-value",
-            "example_value": None,
         },
     ],
     "evaluation_additional_outputs": [
@@ -149,7 +140,6 @@ DEFAULT_PHASE_CONTEXT_STUB = {
             "kind": "Image",
             "super_kind": "Image",
             "relative_path": "images/output-value",
-            "example_value": None,
         },
         {
             "slug": "additional-another-output-socket-slug",
@@ -170,7 +160,6 @@ DEFAULT_PHASE_CONTEXT_STUB = {
             "kind": "Anything",
             "super_kind": "File",
             "relative_path": "yet-another-non-json-output-value",
-            "example_value": None,
         },
     ],
 }
@@ -188,14 +177,13 @@ DEFAULT_ALGORITHM_CONTEXT_STUB = {
                     "kind": "Segmentation",
                     "super_kind": "Image",
                     "relative_path": "images/input-value",
-                    "example_value": None,
                 },
                 {
                     "slug": "another-input-socket-slug",
                     "kind": "Anything",
                     "super_kind": "File",
                     "relative_path": "another-input-value.json",
-                    "example_value": {"key": "value"},
+                    "example_value": None,
                 },
                 {
                     "slug": "yet-another-input-socket-slug",
@@ -209,7 +197,6 @@ DEFAULT_ALGORITHM_CONTEXT_STUB = {
                     "kind": "Anything",
                     "super_kind": "File",
                     "relative_path": "yet-another-non-json-input-value",
-                    "example_value": None,
                 },
             ],
             "outputs": [
@@ -218,7 +205,6 @@ DEFAULT_ALGORITHM_CONTEXT_STUB = {
                     "kind": "Image",
                     "super_kind": "Image",
                     "relative_path": "images/output-value",
-                    "example_value": None,
                 },
                 {
                     "slug": "another-output-socket-slug",
@@ -232,7 +218,6 @@ DEFAULT_ALGORITHM_CONTEXT_STUB = {
                     "kind": "Anything",
                     "super_kind": "Value",
                     "relative_path": "yet-another-output-value.json",
-                    "example_value": {"key": "value"},
                 },
                 {
                     "slug": "yet-another-non-json-output-socket-slug",
@@ -250,7 +235,6 @@ DEFAULT_ALGORITHM_CONTEXT_STUB = {
                     "kind": "Segmentation",
                     "super_kind": "Image",
                     "relative_path": "images/input-value",
-                    "example_value": None,
                 }
             ],
             "outputs": [
@@ -259,7 +243,6 @@ DEFAULT_ALGORITHM_CONTEXT_STUB = {
                     "kind": "Image",
                     "super_kind": "Image",
                     "relative_path": "images/output-value",
-                    "example_value": None,
                 }
             ],
         },
