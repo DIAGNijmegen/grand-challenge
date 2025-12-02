@@ -1463,7 +1463,7 @@ class AlgorithmInterfaceForPhaseDelete(
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs["sibling_interfaces"] = self.phase.algorithm_interfaces
+        kwargs["interfaces"] = self.phase.algorithm_interfaces
         return kwargs
 
     def get_object(self, queryset=None):

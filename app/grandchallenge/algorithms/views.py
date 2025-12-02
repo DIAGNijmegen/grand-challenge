@@ -1259,7 +1259,7 @@ class AlgorithmInterfaceForAlgorithmDelete(
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs.update({"sibling_interfaces": self.algorithm.interfaces})
+        kwargs.update({"interfaces": self.algorithm.interfaces})
         return kwargs
 
     def get_success_url(self):
