@@ -60,7 +60,10 @@ jobs:
                 sudo apt-get update
                 sudo apt-get install -y libcurl4-openssl-dev libssl-dev
             - name: Clean up large cache file so sufficient space is available for containers below
-              run: rm -rf /opt/hostedtoolcache
+              run: |
+                df -h
+                rm -rf /opt/hostedtoolcache
+                df -h
             - name: Pull the GPU container
               run: |
                 docker pull --platform=linux/amd64 \
