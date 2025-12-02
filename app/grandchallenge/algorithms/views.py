@@ -42,6 +42,7 @@ from grandchallenge.algorithms.forms import (
     AlgorithmForm,
     AlgorithmImageForm,
     AlgorithmImageUpdateForm,
+    AlgorithmInterfaceDeleteForm,
     AlgorithmInterfaceForm,
     AlgorithmModelForm,
     AlgorithmModelUpdateForm,
@@ -1243,6 +1244,7 @@ class AlgorithmInterfaceForAlgorithmDelete(
     AlgorithmInterfacePermissionMixin, DeleteView
 ):
     model = AlgorithmAlgorithmInterface
+    form_class = AlgorithmInterfaceDeleteForm
 
     @property
     def algorithm_interface(self):
@@ -1254,6 +1256,11 @@ class AlgorithmInterfaceForAlgorithmDelete(
 
     def get_object(self, queryset=None):
         return self.algorithm_interface
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.update({"sibling_interfaces": self.algorithm.interfaces})
+        return kwargs
 
     def get_success_url(self):
         return reverse(

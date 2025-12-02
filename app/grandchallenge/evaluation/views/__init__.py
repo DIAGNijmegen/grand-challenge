@@ -33,7 +33,10 @@ from django.views.generic import (
 )
 from guardian.mixins import LoginRequiredMixin
 
-from grandchallenge.algorithms.forms import AlgorithmForPhaseForm
+from grandchallenge.algorithms.forms import (
+    AlgorithmForPhaseForm,
+    AlgorithmInterfaceDeleteForm,
+)
 from grandchallenge.algorithms.models import Algorithm, Job
 from grandchallenge.algorithms.views import AlgorithmInterfaceCreateBase
 from grandchallenge.archives.models import Archive
@@ -1448,6 +1451,7 @@ class AlgorithmInterfaceForPhaseDelete(
     DeleteView,
 ):
     model = PhaseAlgorithmInterface
+    form_class = AlgorithmInterfaceDeleteForm
 
     @property
     def algorithm_interface(self):
@@ -1456,6 +1460,11 @@ class AlgorithmInterfaceForPhaseDelete(
             phase=self.phase,
             interface__pk=self.kwargs["interface_pk"],
         )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["sibling_interfaces"] = self.phase.algorithm_interfaces
+        return kwargs
 
     def get_object(self, queryset=None):
         return self.algorithm_interface

@@ -1221,3 +1221,17 @@ class JobInterfaceSelectForm(SaveFormInitMixin, Form):
             )
             for interface in self._algorithm.interfaces.all()
         }
+
+
+class AlgorithmInterfaceDeleteForm(Form):
+    def __init__(self, *args, sibling_interfaces, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sibling_interfaces = sibling_interfaces
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.sibling_interfaces.count() == 1:
+            raise ValidationError(
+                "Cannot delete the only algorithm interface."
+            )
+        return cleaned_data

@@ -10,6 +10,7 @@ from factory.django import ImageField
 from grandchallenge.algorithms.forms import (
     AlgorithmForm,
     AlgorithmForPhaseForm,
+    AlgorithmInterfaceDeleteForm,
     AlgorithmInterfaceForm,
     AlgorithmModelForm,
     AlgorithmModelVersionControlForm,
@@ -1706,3 +1707,34 @@ class TestAlgorithmInterfaceForm:
         new_io = form.save()
 
         assert io == new_io
+
+
+@pytest.mark.django_db
+def test_algorithm_interface_delete_form_validation():
+
+    alg = AlgorithmFactory()
+    interface1 = AlgorithmInterfaceFactory()
+    interface2 = AlgorithmInterfaceFactory()
+    interface3 = AlgorithmInterfaceFactory()
+
+    # Test with only 1 interface - should be invalid
+    alg.interfaces.set([interface1])
+    form = AlgorithmInterfaceDeleteForm(
+        sibling_interfaces=alg.interfaces, data={}
+    )
+    assert not form.is_valid()
+    assert "Cannot delete the only algorithm interface" in str(form.errors)
+
+    # Test with 2 interfaces - should be valid
+    alg.interfaces.set([interface1, interface2])
+    form = AlgorithmInterfaceDeleteForm(
+        sibling_interfaces=alg.interfaces, data={}
+    )
+    assert form.is_valid()
+
+    # Test with 3 interfaces - should be valid
+    alg.interfaces.set([interface1, interface2, interface3])
+    form = AlgorithmInterfaceDeleteForm(
+        sibling_interfaces=alg.interfaces, data={}
+    )
+    assert form.is_valid()
