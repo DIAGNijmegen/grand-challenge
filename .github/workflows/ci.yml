@@ -51,21 +51,18 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
-            - name: Install pycurl dependencies
-              run: |
-                sudo apt-get update
-                sudo apt-get install -y libcurl4-openssl-dev libssl-dev
-            - name: Clean up large cache file so sufficient space is available for container below
-              run: |
-                rm -rf /opt/hostedtoolcache
-            - name: Pull the algorithm-example base container
-              run: |
-                docker pull --platform=linux/amd64 \
-                public.ecr.aws/deep-learning-containers/pytorch-inference:2.6.0-gpu-py312-cu124-ubuntu22.04-sagemaker
             - name: Set up Python ${{ env.PYTHON_VERSION }}
               uses: astral-sh/setup-uv@v6
               with:
                 python-version: ${{ env.PYTHON_VERSION }}
+            - name: Install pycurl dependencies
+              run: |
+                sudo apt-get update
+                sudo apt-get install -y libcurl4-openssl-dev libssl-dev
+            - name: Pull the algorithm-example base container
+              run: |
+                docker pull --platform=linux/amd64 \
+                pytorch/pytorch:2.9.1-cuda12.6-cudnn9-runtime
             - name: Run the forge integration tests
               run: |
                 cd app
