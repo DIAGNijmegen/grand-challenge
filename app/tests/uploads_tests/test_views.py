@@ -1,8 +1,11 @@
 import pytest
 from requests import put
 
+from grandchallenge.cases.models import PostProcessImageTaskStatusChoices
 from grandchallenge.uploads.models import UserUpload
+from tests.cases_tests.factories import PostProcessImageTaskFactory
 from tests.factories import UserFactory
+from tests.uploads_tests.factories import UserUploadFactory
 from tests.utils import get_view_for_user
 
 
@@ -303,3 +306,73 @@ def test_prepare_upload_parts_limit_reached(client, settings):
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Upload limit reached"
+
+
+@pytest.mark.django_db
+def test_create_multipart_duplicate_filename(client):
+    # https://uppy.io/docs/aws-s3-multipart/#createMultipartUpload-file
+    u = UserFactory()
+
+    UserUploadFactory(
+        creator=u,
+        filename="foo.bat",
+    )
+
+    response = get_view_for_user(
+        client=client,
+        viewname="api:upload-list",
+        method=client.post,
+        data={"filename": "foo.bat"},
+        content_type="application/json",
+        user=u,
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "non_field_errors": ["Filenames must be unique."]
+    }
+
+    # Another user should be able to create the same filename
+    response = get_view_for_user(
+        client=client,
+        viewname="api:upload-list",
+        method=client.post,
+        data={"filename": "foo.bat"},
+        content_type="application/json",
+        user=UserFactory(),
+    )
+
+    assert response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_create_multipart_with_too_many_preprocessing(client, settings):
+    settings.CASES_MAX_NUM_USER_POST_PROCESSING_TASKS = 1
+
+    user = UserFactory()
+
+    PostProcessImageTaskFactory()  # Active for another user
+    task = PostProcessImageTaskFactory(image__origin__creator=user)
+
+    def do_request():
+        return get_view_for_user(
+            client=client,
+            viewname="api:upload-list",
+            method=client.post,
+            data={"filename": "foo.bat"},
+            content_type="application/json",
+            user=user,
+        )
+
+    response = do_request()
+    assert response.status_code == 400
+    assert (
+        "You currently have 1 active image post processing tasks. Please wait for them to complete before trying again."
+        in response.json()["non_field_errors"]
+    )
+
+    task.status = PostProcessImageTaskStatusChoices.COMPLETED
+    task.save()
+
+    response = do_request()
+    assert response.status_code == 201

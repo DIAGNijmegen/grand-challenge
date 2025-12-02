@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from django.conf import settings
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import (
     CharField,
@@ -10,6 +11,10 @@ from rest_framework.fields import (
 )
 from rest_framework.serializers import ModelSerializer, Serializer
 
+from grandchallenge.cases.models import (
+    PostProcessImageTask,
+    PostProcessImageTaskStatusChoices,
+)
 from grandchallenge.uploads.models import UserUpload
 
 
@@ -58,6 +63,25 @@ class UserUploadCreateSerializer(UserUploadSerializer):
         if UserUpload.objects.filter(creator=data["creator"]).count() > 2000:
             raise ValidationError(
                 "You have created too many uploads. Please try again later."
+            )
+
+        if UserUpload.objects.filter(
+            creator=data["creator"], filename__iexact=data["filename"]
+        ).exists():
+            raise ValidationError("Filenames must be unique.")
+
+        num_user_post_processing_tasks = PostProcessImageTask.objects.filter(
+            status=PostProcessImageTaskStatusChoices.INITIALIZED,
+            image__origin__creator=data["creator"],
+        ).count()
+
+        if (
+            num_user_post_processing_tasks
+            >= settings.CASES_MAX_NUM_USER_POST_PROCESSING_TASKS
+        ):
+            raise ValidationError(
+                f"You currently have {num_user_post_processing_tasks} active image post processing tasks. "
+                "Please wait for them to complete before trying again."
             )
 
         return data
