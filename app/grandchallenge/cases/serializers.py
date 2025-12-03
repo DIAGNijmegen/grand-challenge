@@ -72,10 +72,10 @@ class HyperlinkedImageSerializer(serializers.ModelSerializer):
         method_name="get_empty_string"
     )
 
-    def get_empty_string(self, obj):
+    def get_empty_string(self, obj) -> str:
         return ""
 
-    def get_none(self, obj):
+    def get_none(self, obj) -> str | None:
         return None
 
     class Meta:
