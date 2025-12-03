@@ -25,6 +25,7 @@ from django.template.defaultfilters import pluralize
 from django.utils._os import safe_join
 from django.utils.text import get_valid_filename
 from django.utils.translation import gettext_lazy as _
+from django_deprecate_fields import deprecate_field
 from grand_challenge_dicom_de_identifier.deidentifier import DicomDeidentifier
 from guardian.shortcuts import assign_perm, get_groups_with_perms, remove_perm
 from panimg.image_builders.metaio_utils import load_sitk_image
@@ -488,6 +489,7 @@ class Image(UUIDModel):
         (FOV_EMPTY, "Not applicable"),
     )
 
+    # Deprecated, see https://github.com/DIAGNijmegen/rse-roadmap/issues/446
     PATIENT_SEX_MALE = PatientSex.MALE.value
     PATIENT_SEX_FEMALE = PatientSex.FEMALE.value
     PATIENT_SEX_OTHER = PatientSex.OTHER.value
@@ -521,26 +523,36 @@ class Image(UUIDModel):
     color_space = models.CharField(
         max_length=5, blank=True, choices=COLOR_SPACES
     )
-    patient_id = models.CharField(max_length=64, default="", blank=True)
-    # Max length for patient_name is 5 * 64 + 4 = 324, as described for value
-    # representation PN in the DICOM standard. See table at:
-    # http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html
-    patient_name = models.CharField(max_length=324, default="", blank=True)
-    patient_birth_date = models.DateField(null=True, blank=True)
-    patient_age = models.CharField(max_length=4, default="", blank=True)
-    patient_sex = models.CharField(
-        max_length=1, blank=True, choices=PATIENT_SEX_CHOICES, default=""
+    # Deprecated fields, see https://github.com/DIAGNijmegen/rse-roadmap/issues/446
+    patient_id = deprecate_field(
+        models.CharField(max_length=64, default="", blank=True)
     )
-    study_date = models.DateField(null=True, blank=True)
-    study_instance_uid = models.CharField(
-        max_length=64, default="", blank=True
+    patient_name = deprecate_field(
+        models.CharField(max_length=324, default="", blank=True)
     )
-    series_instance_uid = models.CharField(
-        max_length=64, default="", blank=True
+    patient_birth_date = deprecate_field(
+        models.DateField(null=True, blank=True)
     )
-    study_description = models.CharField(max_length=64, default="", blank=True)
-    series_description = models.CharField(
-        max_length=64, default="", blank=True
+    patient_age = deprecate_field(
+        models.CharField(max_length=4, default="", blank=True)
+    )
+    patient_sex = deprecate_field(
+        models.CharField(
+            max_length=1, blank=True, choices=PATIENT_SEX_CHOICES, default=""
+        )
+    )
+    study_date = deprecate_field(models.DateField(null=True, blank=True))
+    study_instance_uid = deprecate_field(
+        models.CharField(max_length=64, default="", blank=True)
+    )
+    series_instance_uid = deprecate_field(
+        models.CharField(max_length=64, default="", blank=True)
+    )
+    study_description = deprecate_field(
+        models.CharField(max_length=64, default="", blank=True)
+    )
+    series_description = deprecate_field(
+        models.CharField(max_length=64, default="", blank=True)
     )
     segments = models.JSONField(
         null=True,
