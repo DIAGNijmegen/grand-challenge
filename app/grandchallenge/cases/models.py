@@ -29,12 +29,7 @@ from django_deprecate_fields import deprecate_field
 from grand_challenge_dicom_de_identifier.deidentifier import DicomDeidentifier
 from guardian.shortcuts import assign_perm, get_groups_with_perms, remove_perm
 from panimg.image_builders.metaio_utils import load_sitk_image
-from panimg.models import (
-    MAXIMUM_SEGMENTS_LENGTH,
-    ColorSpace,
-    ImageType,
-    PatientSex,
-)
+from panimg.models import MAXIMUM_SEGMENTS_LENGTH, ColorSpace, ImageType
 from pydantic import ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 from pydantic.dataclasses import dataclass
@@ -490,9 +485,9 @@ class Image(UUIDModel):
     )
 
     # Deprecated, see https://github.com/DIAGNijmegen/rse-roadmap/issues/446
-    PATIENT_SEX_MALE = PatientSex.MALE.value
-    PATIENT_SEX_FEMALE = PatientSex.FEMALE.value
-    PATIENT_SEX_OTHER = PatientSex.OTHER.value
+    PATIENT_SEX_MALE = "M"
+    PATIENT_SEX_FEMALE = "F"
+    PATIENT_SEX_OTHER = "O"
     PATIENT_SEX_CHOICES = (
         (PATIENT_SEX_MALE, "Male"),
         (PATIENT_SEX_FEMALE, "Female"),
