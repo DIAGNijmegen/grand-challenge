@@ -148,6 +148,8 @@ def copy_and_render(
                 if targetfile_zpath.suffix == ".py":
                     # Replace escaped characters
                     rendered_content = rendered_content.replace("&#x27;", "'")
+                    rendered_content = rendered_content.replace("&quot;", '"')
+                    rendered_content = rendered_content.replace("&lt;", "<")
                     rendered_content = apply_black(rendered_content)
                 else:
                     rendered_content = f"{rendered_content.strip()}\n"
