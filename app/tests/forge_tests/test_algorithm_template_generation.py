@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 
+from grandchallenge.components.models import INTERFACE_KIND_JSON_EXAMPLES
 from grandchallenge.forge.forge import generate_algorithm_template
 from grandchallenge.forge.models import ForgeAlgorithm
 from tests.forge_tests.utils import (
@@ -38,6 +39,50 @@ def test_for_algorithm_template_content(tmp_path):
         "test/input/interf1",
     ]:
         assert (template_path / filename).exists()
+
+
+@pytest.mark.parametrize(
+    "example_value",
+    INTERFACE_KIND_JSON_EXAMPLES.values(),
+)
+def test_algorithm_template_example_value_rendering(example_value, tmp_path):
+    testrun_zpath = Path(str(uuid4()))
+
+    context = algorithm_template_context_factory(
+        algorithm_interfaces=[
+            {
+                "inputs": [
+                    {
+                        "slug": "input-socket-slug",
+                        "relative_path": "input-value.json",
+                        "example_value": example_value.value,
+                        "is_file_kind": True,
+                        "is_json_kind": True,
+                    },
+                ],
+                "outputs": [
+                    {
+                        "slug": "output-socket-slug",
+                        "relative_path": "output-value.json",
+                        "example_value": example_value.value,
+                        "is_file_kind": True,
+                        "is_json_kind": True,
+                    },
+                ],
+            }
+        ],
+    )
+
+    # Black post-processing already tests that example values with escaped characters can
+    # correctly be parsed by a Python interpreter
+    with zipfile_to_filesystem(
+        output_path=tmp_path, preserve_permissions=False
+    ) as zip_file:
+        generate_algorithm_template(
+            algorithm=ForgeAlgorithm(**context),
+            output_zip_file=zip_file,
+            target_zpath=testrun_zpath,
+        )
 
 
 @pytest.mark.forge_integration
