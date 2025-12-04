@@ -4,18 +4,23 @@ register = template.Library()
 
 
 @register.filter
-def has_json(arg):
-    return any(item.is_json for item in arg)
+def has_json_kind(arg):
+    return any(item.is_json_kind for item in arg)
 
 
 @register.filter
-def has_image(arg):
-    return any(item.is_image for item in arg)
+def has_image_kind(arg):
+    return any(item.is_image_kind for item in arg)
 
 
 @register.filter
-def has_dicom_image_set(arg):
-    return any(item.is_dicom_image_set for item in arg)
+def has_panimg_kind(arg):
+    return any(item.is_panimg_kind for item in arg)
+
+
+@register.filter
+def has_dicom_image_kind(arg):
+    return any(item.is_dicom_image_kind for item in arg)
 
 
 @register.filter
@@ -24,8 +29,8 @@ def is_string(arg):
 
 
 @register.filter
-def has_file(arg):
-    return any(item.is_file for item in arg)
+def has_file_kind(arg):
+    return any(item.is_file_kind for item in arg)
 
 
 @register.filter(name="zip")

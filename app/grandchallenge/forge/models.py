@@ -6,11 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, HttpUrl, RootModel
 from pydantic_core import MISSING
 
-from grandchallenge.components.models import (
-    ComponentJob,
-    InterfaceKindChoices,
-    InterfaceSuperKindChoices,
-)
+from grandchallenge.components.models import ComponentJob
 
 
 class ForgeArchive(BaseModel):
@@ -18,47 +14,16 @@ class ForgeArchive(BaseModel):
     url: HttpUrl
 
 
-ForgeKindEnum = Enum(
-    "ForgeKindEnum", {str(m.name): str(m.label) for m in InterfaceKindChoices}
-)
-
-ForgeSuperKindEnum = Enum(
-    "ForgeSuperKindEnum",
-    {str(m.name): str(m.label) for m in InterfaceSuperKindChoices},
-)
-
-
 class ForgeSocket(BaseModel):
     slug: str
     relative_path: str
-    kind: ForgeKindEnum
-    super_kind: ForgeSuperKindEnum
     example_value: Any = MISSING
 
-    @property
-    def is_json(self):
-        return self.relative_path.endswith(".json")
-
-    @property
-    def is_image(self):
-        return (
-            self.super_kind == ForgeSuperKindEnum.IMAGE
-            and not self.is_dicom_image_set
-        )
-
-    @property
-    def is_file(self):
-        return (
-            self.super_kind == ForgeSuperKindEnum.FILE
-            and not self.relative_path.endswith(".json")
-        )
-
-    @property
-    def is_dicom_image_set(self):
-        return (
-            self.super_kind == ForgeSuperKindEnum.IMAGE
-            and self.kind == ForgeKindEnum.DICOM_IMAGE_SET
-        )
+    is_image_kind: bool = False
+    is_panimg_kind: bool = False
+    is_dicom_image_kind: bool = False
+    is_json_kind: bool = False
+    is_file_kind: bool = False
 
     @property
     def has_example_value(self):

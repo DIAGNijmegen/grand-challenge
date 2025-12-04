@@ -25,14 +25,14 @@ from pathlib import Path
 import json
 import torch
 
-{% if object.algorithm_input_sockets|has_image or object.algorithm_output_sockets|has_image or object.algorithm_input_sockets|has_dicom_image_set or object.algorithm_output_sockets|has_dicom_image_set %}
+{% if object.algorithm_input_sockets|has_image_kind or object.algorithm_output_sockets|has_image_kind %}
 from glob import glob
 import numpy
 {% endif %}
-{% if object.algorithm_input_sockets|has_image or object.algorithm_output_sockets|has_image %}
+{% if object.algorithm_input_sockets|has_panimg_kind or object.algorithm_output_sockets|has_panimg_kind %}
 import SimpleITK
 {% endif %}
-{% if object.algorithm_input_sockets|has_dicom_image_set or object.algorithm_output_sockets|has_dicom_image_set%}
+{% if object.algorithm_input_sockets|has_dicom_image_kind or object.algorithm_output_sockets|has_dicom_image_kind %}
 import pydicom
 {% endif %}
 
@@ -62,15 +62,15 @@ def {{ interface_name }}_handler():
     input_{{ socket.slug|dash_to_underscore }} = load_dicom_image_set_as_array(
         location=INPUT_PATH / "{{ socket.relative_path }}",
     )
-    {% elif socket.is_image %}
+    {% elif socket.is_panimg_kind %}
     input_{{ socket.slug|dash_to_underscore }} = load_image_file_as_array(
         location=INPUT_PATH / "{{ socket.relative_path }}",
     )
-    {% elif socket.is_json %}
+    {% elif socket.is_json_kind %}
     input_{{ socket.slug|dash_to_underscore }} = load_json_file(
          location=INPUT_PATH / "{{ socket.relative_path }}",
     )
-    {% elif socket.is_file %}
+    {% elif socket.is_file_kind %}
     input_{{ socket.slug|dash_to_underscore }} = load_file(
          location=INPUT_PATH / "{{ socket.relative_path }}",
     )
@@ -104,28 +104,26 @@ def {{ interface_name }}_handler():
             {% else %}
                 {{ socket.example_value }}
             {% endif %}
-        {% elif socket.is_image %} numpy.eye(4, 2)
-        {% elif socket.is_json %} {"content": "should match the required format"}
-        {% elif socket.is_file %} "content: should match the required format"
+        {% elif socket.is_panimg_kind %} numpy.eye(4, 2)
+        {% elif socket.is_json_kind %} {"content": "should match the required format"}
+        {% elif socket.is_file_kind %} "content: should match the required format"
         {% endif %}
         {% endspaceless %}
     {% endfor %}
 
     # Save your output
     {% for socket in interface.outputs %}
-    {% if socket.is_image %}
+    {% if socket.is_panimg_kind %}
     write_array_as_image_file(
         location=OUTPUT_PATH / "{{ socket.relative_path }}",
         array=output_{{ socket.slug|dash_to_underscore }},
     )
-    {% endif %}
-    {% if socket.is_json %}
+    {% elif socket.is_json_kind %}
     write_json_file(
         location=OUTPUT_PATH / "{{ socket.relative_path }}",
         content=output_{{ socket.slug|dash_to_underscore }}
     )
-    {% endif %}
-    {% if socket.is_file %}
+    {% elif socket.is_file_kind %}
     write_file(
         location=OUTPUT_PATH / "{{ socket.relative_path }}",
         content=output_{{ socket.slug|dash_to_underscore }}
@@ -149,14 +147,14 @@ def load_json_file(*, location):
     with open(location, 'r') as f:
         return json.loads(f.read())
 
-{% if object.algorithm_output_sockets|has_json %}
+{% if object.algorithm_output_sockets|has_json_kind %}
 def write_json_file(*, location, content):
     # Writes a json file
     with open(location, 'w') as f:
         f.write(json.dumps(content, indent=4))
 {% endif %}
 
-{% if object.algorithm_input_sockets|has_image %}
+{% if object.algorithm_input_sockets|has_panimg_kind %}
 def load_image_file_as_array(*, location):
     # Use SimpleITK to read a file
     input_files = glob(str(location / "*.tif")) + glob(str(location / "*.tiff")) + glob(str(location / "*.mha"))
@@ -167,7 +165,7 @@ def load_image_file_as_array(*, location):
 {% endif %}
 
 
-{% if object.algorithm_input_sockets|has_dicom_image_set %}
+{% if object.algorithm_input_sockets|has_dicom_image_kind %}
 def load_dicom_image_set_as_array(*, location):
     # Get all DICOM files in the directory
     dicom_files = glob(str(location / "*.dcm"))
@@ -193,7 +191,7 @@ def load_dicom_image_set_as_array(*, location):
 {% endif %}
 
 
-{% if object.algorithm_output_sockets|has_image %}
+{% if object.algorithm_output_sockets|has_panimg_kind %}
 def write_array_as_image_file(*, location, array):
     location.mkdir(parents=True, exist_ok=True)
 
@@ -209,7 +207,7 @@ def write_array_as_image_file(*, location, array):
 {% endif %}
 
 
-{% if object.algorithm_input_sockets|has_file %}
+{% if object.algorithm_input_sockets|has_file_kind %}
 # Note to the developer:
 #   the following function is very generic and should likely
 #   be adopted to something more specific for your algorithm/challenge
@@ -220,7 +218,7 @@ def load_file(*, location):
 {% endif %}
 
 
-{% if object.algorithm_output_sockets|has_file %}
+{% if object.algorithm_output_sockets|has_file_kind %}
 # Note to the developer:
 #   the following function is very generic and should likely
 #   be adopted to something more specific for your algorithm/challenge
