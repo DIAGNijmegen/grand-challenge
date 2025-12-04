@@ -332,11 +332,51 @@ async function preprocessDicomFile(file) {
     return new File([newBuffer], file.name, { type: file.type });
 }
 
+class DicomDeidentifierPlugin extends Uppy.Core.BasePlugin {
+    constructor(uppy, opts) {
+        super(uppy, opts);
+
+        this.id = opts?.id || "DicomDeidentifierPlugin";
+        this.type = "modifier";
+
+        this.prepareUpload = this.prepareUpload.bind(this);
+    }
+
+    async prepareUpload(fileIDs) {
+        const promises = fileIDs.map(async fileID => {
+            const file = this.uppy.getFile(fileID);
+
+            try {
+                const processedFile = await preprocessDicomFile(file.data);
+                this.uppy.setFileState(fileID, { data: processedFile });
+                return Promise.resolve();
+            } catch (err) {
+                this.uppy.removeFile(fileID);
+                window.alert(
+                    `Could not upload ${file.name} (${file.type}): ${err.message}`,
+                );
+                return Promise.reject(err);
+            }
+        });
+
+        return Promise.allSettled(promises);
+    }
+
+    install() {
+        this.uppy.addPreProcessor(this.prepareUpload);
+    }
+
+    uninstall() {
+        this.uppy.removePreProcessor(this.prepareUpload);
+    }
+}
+
 // Export for testing in Node.js environment
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         getDummyValue,
         preprocessDicomFile,
+        DicomDeidentifierPlugin,
         // For testing only
         _uidMap: uidMap,
     };
