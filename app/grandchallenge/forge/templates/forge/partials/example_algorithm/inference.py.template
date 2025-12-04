@@ -169,8 +169,6 @@ def load_image_file_as_array(*, location):
 
 {% if object.algorithm_input_sockets|has_dicom_image_set %}
 def load_dicom_image_set_as_array(*, location):
-    pass
-{% comment %}
     # Get all DICOM files in the directory
     dicom_files = glob(str(location / "*.dcm"))
 
@@ -191,7 +189,7 @@ def load_dicom_image_set_as_array(*, location):
     else:
         result = numpy.array([[0]]) # 2D
 
-    return result {% endcomment %}
+    return result
 {% endif %}
 
 
