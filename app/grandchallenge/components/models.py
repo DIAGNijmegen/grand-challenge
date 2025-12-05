@@ -35,6 +35,7 @@ from django.utils.translation import gettext_lazy as _
 from django_deprecate_fields import deprecate_field
 from django_extensions.db.fields import AutoSlugField
 from panimg.models import MAXIMUM_SEGMENTS_LENGTH
+from pydantic_core import MISSING
 
 from grandchallenge.cases.models import (
     DICOMImageSetUpload,
@@ -699,12 +700,15 @@ class ComponentInterface(FieldChangeMixin, OverlaySegmentsMixin):
 
         return ForgeSocket(
             slug=self.slug,
-            kind=self.get_kind_display(),
-            super_kind=self.super_kind.label,
             relative_path=self.relative_path,
             example_value=(
-                self.json_kind_example.value if self.is_json_kind else None
+                self.json_kind_example.value if self.is_json_kind else MISSING
             ),
+            is_image_kind=self.is_image_kind,
+            is_panimg_kind=self.is_panimg_kind,
+            is_dicom_image_kind=self.is_dicom_image_kind,
+            is_json_kind=self.is_json_kind,
+            is_file_kind=self.is_file_kind,
         )
 
     class Meta:
