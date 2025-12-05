@@ -24,7 +24,7 @@ from grandchallenge.components.backends.exceptions import (
 )
 from grandchallenge.components.form_fields import (
     INTERFACE_FORM_FIELD_PREFIX,
-    InterfaceFormFieldFactory,
+    InterfaceFormFieldsFactory,
 )
 from grandchallenge.components.models import CIVData, ComponentInterface
 from grandchallenge.core.forms import SaveFormInitMixin, UserMixin
@@ -133,11 +133,13 @@ class AdditionalInputsMixin(UserMixin):
             else:
                 initial = None
 
-            self.fields[prefixed_interface_slug] = InterfaceFormFieldFactory(
-                interface=input,
-                user=self._user,
-                required=input.value_required,
-                initial=initial if initial else input.default_value,
+            self.fields.update(
+                InterfaceFormFieldsFactory(
+                    interface=input,
+                    user=self._user,
+                    required=input.value_required,
+                    initial=initial if initial else input.default_value,
+                )
             )
 
     def clean(self):
@@ -165,7 +167,7 @@ class AdditionalInputsMixin(UserMixin):
 
 
 class MultipleCIVForm(Form):
-    possible_widgets = InterfaceFormFieldFactory.possible_widgets
+    possible_widgets = InterfaceFormFieldsFactory.possible_widgets
 
     def __init__(self, *args, instance, base_obj, user, **kwargs):  # noqa C901
         super().__init__(*args, **kwargs)
@@ -206,11 +208,13 @@ class MultipleCIVForm(Form):
                     interface__slug=interface.slug
                 ).first()
 
-            self.fields[prefixed_interface_slug] = InterfaceFormFieldFactory(
-                interface=interface,
-                user=self.user,
-                required=False,
-                initial=current_value,
+            self.fields.update(
+                InterfaceFormFieldsFactory(
+                    interface=interface,
+                    user=self.user,
+                    required=False,
+                    initial=current_value,
+                )
             )
 
         # Add fields for dynamically added new interfaces
@@ -246,13 +250,13 @@ class MultipleCIVForm(Form):
                     except AttributeError:
                         current_value = self.data.get(slug)
 
-                self.fields[
-                    f"{INTERFACE_FORM_FIELD_PREFIX}{interface_slug}"
-                ] = InterfaceFormFieldFactory(
-                    interface=interface,
-                    user=self.user,
-                    required=False,
-                    initial=current_value,
+                self.fields.update(
+                    InterfaceFormFieldsFactory(
+                        interface=interface,
+                        user=self.user,
+                        required=False,
+                        initial=current_value,
+                    )
                 )
 
     @staticmethod
@@ -320,7 +324,7 @@ class CIVSetUpdateFormMixin:
 
 class SingleCIVForm(Form):
     possible_widgets = {
-        *InterfaceFormFieldFactory.possible_widgets,
+        *InterfaceFormFieldsFactory.possible_widgets,
         autocomplete.ModelSelect2,
         Select,
     }
@@ -406,12 +410,12 @@ class SingleCIVForm(Form):
         )
 
         if selected_interface is not None:
-            self.fields[
-                f"{INTERFACE_FORM_FIELD_PREFIX}{selected_interface.slug}"
-            ] = InterfaceFormFieldFactory(
-                interface=selected_interface,
-                user=user,
-                required=selected_interface.value_required,
+            self.fields.update(
+                InterfaceFormFieldsFactory(
+                    interface=selected_interface,
+                    user=user,
+                    required=selected_interface.value_required,
+                )
             )
 
 

@@ -7,7 +7,7 @@ from grandchallenge.archives.forms import (
 )
 from grandchallenge.components.form_fields import (
     INTERFACE_FORM_FIELD_PREFIX,
-    InterfaceFormFieldFactory,
+    InterfaceFormFieldsFactory,
 )
 from grandchallenge.components.models import (
     ComponentInterface,
@@ -45,7 +45,7 @@ def test_interface_form_field_image_queryset_filter():
     upload1.status = UserUpload.StatusChoices.COMPLETED
     upload1.save()
     ci = ComponentInterfaceFactory(kind=ComponentInterface.Kind.PANIMG_IMAGE)
-    field = InterfaceFormFieldFactory(interface=ci, user=user)
+    field = InterfaceFormFieldsFactory(interface=ci, user=user).popitem()
     assert im1 in field.fields[0].queryset.all()
     assert im2 not in field.fields[0].queryset.all()
     assert upload1 in field.fields[1].queryset.all()

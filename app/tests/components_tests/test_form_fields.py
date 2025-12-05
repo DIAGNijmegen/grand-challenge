@@ -5,7 +5,7 @@ from factory.fuzzy import FuzzyChoice
 
 from grandchallenge.components.form_fields import (
     FlexibleFileField,
-    InterfaceFormFieldFactory,
+    InterfaceFormFieldsFactory,
 )
 from grandchallenge.components.models import (
     InterfaceKindChoices,
@@ -294,7 +294,7 @@ def test_interface_form_field_factory_wrong_pk_type(ci_kind, initial_pk):
     ci = ComponentInterfaceFactory(kind=ci_kind)
 
     with pytest.raises(ValidationError) as e:
-        InterfaceFormFieldFactory(interface=ci, user=user, initial=initial_pk)
+        InterfaceFormFieldsFactory(interface=ci, user=user, initial=initial_pk)
     assert str(e.value) == f"['“{initial_pk}” is not a valid UUID.']"
 
 
@@ -308,21 +308,27 @@ def test_flexible_file_widget_prepopulated_value_algorithm_job():
     job = AlgorithmJobFactory(creator=creator, time_limit=60)
     job.inputs.set([civ])
 
-    field = InterfaceFormFieldFactory(interface=ci, user=creator, initial=civ)
+    field = InterfaceFormFieldsFactory(
+        interface=ci, user=creator, initial=civ
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] == civ
     assert field.initial == civ.pk
 
-    field = InterfaceFormFieldFactory(
+    field = InterfaceFormFieldsFactory(
         interface=ci, user=creator, initial=civ.pk
-    )
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] == civ
     assert field.initial == civ.pk
 
-    field = InterfaceFormFieldFactory(interface=ci, user=user, initial=civ)
+    field = InterfaceFormFieldsFactory(
+        interface=ci, user=user, initial=civ
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] is None
     assert field.initial is None
 
-    field = InterfaceFormFieldFactory(interface=ci, user=user, initial=civ.pk)
+    field = InterfaceFormFieldsFactory(
+        interface=ci, user=user, initial=civ.pk
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] is None
     assert field.initial is None
 
@@ -338,21 +344,27 @@ def test_flexible_file_widget_prepopulated_value_display_set():
     display_set.reader_study.add_editor(editor)
     display_set.values.set([civ])
 
-    field = InterfaceFormFieldFactory(interface=ci, user=editor, initial=civ)
+    field = InterfaceFormFieldsFactory(
+        interface=ci, user=editor, initial=civ
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] == civ
     assert field.initial == civ.pk
 
-    field = InterfaceFormFieldFactory(
+    field = InterfaceFormFieldsFactory(
         interface=ci, user=editor, initial=civ.pk
-    )
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] == civ
     assert field.initial == civ.pk
 
-    field = InterfaceFormFieldFactory(interface=ci, user=user, initial=civ)
+    field = InterfaceFormFieldsFactory(
+        interface=ci, user=user, initial=civ
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] is None
     assert field.initial is None
 
-    field = InterfaceFormFieldFactory(interface=ci, user=user, initial=civ.pk)
+    field = InterfaceFormFieldsFactory(
+        interface=ci, user=user, initial=civ.pk
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] is None
     assert field.initial is None
 
@@ -368,21 +380,27 @@ def test_flexible_file_widget_prepopulated_value_archive_item():
     archive_item.archive.add_editor(editor)
     archive_item.values.set([civ])
 
-    field = InterfaceFormFieldFactory(interface=ci, user=editor, initial=civ)
+    field = InterfaceFormFieldsFactory(
+        interface=ci, user=editor, initial=civ
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] == civ
     assert field.initial == civ.pk
 
-    field = InterfaceFormFieldFactory(
+    field = InterfaceFormFieldsFactory(
         interface=ci, user=editor, initial=civ.pk
-    )
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] == civ
     assert field.initial == civ.pk
 
-    field = InterfaceFormFieldFactory(interface=ci, user=user, initial=civ)
+    field = InterfaceFormFieldsFactory(
+        interface=ci, user=user, initial=civ
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] is None
     assert field.initial is None
 
-    field = InterfaceFormFieldFactory(interface=ci, user=user, initial=civ.pk)
+    field = InterfaceFormFieldsFactory(
+        interface=ci, user=user, initial=civ.pk
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] is None
     assert field.initial is None
 
@@ -394,12 +412,14 @@ def test_flexible_file_widget_prepopulated_value_user_upload():
     upload = UserUploadFactory(creator=creator)
     initial = str(upload.pk)
 
-    field = InterfaceFormFieldFactory(
+    field = InterfaceFormFieldsFactory(
         interface=ci, user=creator, initial=initial
-    )
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] == upload
     assert field.initial == initial
 
-    field = InterfaceFormFieldFactory(interface=ci, user=user, initial=initial)
+    field = InterfaceFormFieldsFactory(
+        interface=ci, user=user, initial=initial
+    ).popitem()[1]
     assert field.widget.attrs["current_value"] is None
     assert field.initial is None

@@ -3,11 +3,14 @@ from django.core.exceptions import ValidationError
 from django.db.models import TextChoices
 from django.forms import ModelChoiceField, MultiValueField
 
+from grandchallenge.cases.models import Image
 from grandchallenge.cases.widgets import (
     DICOMUploadField,
     FlexibleImageField,
     FlexibleImageWidget,
     ImageSearchWidget,
+    ImageSourceChoiceField,
+    ImageSourceChoiceWidget,
 )
 from grandchallenge.components.models import ComponentInterfaceValue
 from grandchallenge.components.schemas import generate_component_json_schema
@@ -42,11 +45,12 @@ file_upload_text = (
 INTERFACE_FORM_FIELD_PREFIX = "__INTERFACE_FIELD__"
 
 
-class InterfaceFormFieldFactory:
+class InterfaceFormFieldsFactory:
     possible_widgets = {
         UserUploadMultipleWidget,
         UserUploadSingleWidget,
         DICOMUserUploadMultipleWidget,
+        ImageSourceChoiceWidget,
         JSONEditorWidget,
         FlexibleImageWidget,
         ImageSearchWidget,
@@ -57,11 +61,11 @@ class InterfaceFormFieldFactory:
     def __new__(
         cls,
         *,
-        interface=None,
+        interface,
         user=None,
         required=True,
         initial=None,
-        help_text="",
+        current_socket_value=None,
         disabled=False,
     ):
         if (
@@ -69,6 +73,10 @@ class InterfaceFormFieldFactory:
             and not initial.has_value
         ):
             initial = None
+
+        prefixed_interface_slug = (
+            f"{INTERFACE_FORM_FIELD_PREFIX}{interface.slug}"
+        )
 
         kwargs = {
             "required": required,
@@ -78,31 +86,54 @@ class InterfaceFormFieldFactory:
         }
 
         if interface.super_kind == interface.SuperKind.IMAGE:
-            if interface.is_dicom_image_kind:
-                return DICOMUploadField(
-                    user=user,
-                    initial=initial,
-                    **kwargs,
-                )
-            else:
-                return FlexibleImageField(
-                    user=user,
-                    initial=initial,
-                    **kwargs,
-                )
-        elif interface.super_kind == interface.SuperKind.FILE:
-            return FlexibleFileField(
+            image_search_queryset = filter_by_permission(
+                queryset=Image.objects.filter(
+                    dicom_image_set__isnull=not interface.is_dicom_image_kind
+                ),
                 user=user,
-                interface=interface,
-                initial=initial,
-                **kwargs,
+                codename="view_image",
             )
+            if interface.is_dicom_image_kind:
+                return {
+                    f"{prefixed_interface_slug}__widget_choice": ImageSourceChoiceField(
+                        current_socket_value=current_socket_value
+                    ),
+                    f"{prefixed_interface_slug}__upload": DICOMUploadField(
+                        user=user,
+                        initial=initial,
+                        **kwargs,
+                    ),
+                    f"{prefixed_interface_slug}__search": ModelChoiceField(
+                        queryset=image_search_queryset,
+                        required=False,
+                        widget=ImageSearchWidget(),
+                    ),
+                }
+            else:
+                return {
+                    prefixed_interface_slug: FlexibleImageField(
+                        user=user,
+                        initial=initial,
+                        **kwargs,
+                    )
+                }
+        elif interface.super_kind == interface.SuperKind.FILE:
+            return {
+                prefixed_interface_slug: FlexibleFileField(
+                    user=user,
+                    interface=interface,
+                    initial=initial,
+                    **kwargs,
+                )
+            }
         elif interface.super_kind == interface.SuperKind.VALUE:
-            return cls.get_json_field(
-                interface=interface,
-                initial=initial,
-                **kwargs,
-            )
+            return {
+                prefixed_interface_slug: cls.get_json_field(
+                    interface=interface,
+                    initial=initial,
+                    **kwargs,
+                )
+            }
         else:
             raise NotImplementedError(
                 f"Unknown interface super kind: {interface.super_kind}"
