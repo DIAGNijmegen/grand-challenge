@@ -100,7 +100,6 @@ class InterfaceFormFieldsFactory:
                     ),
                     f"{prefixed_interface_slug}__upload": DICOMUploadField(
                         user=user,
-                        initial=initial,
                         **kwargs,
                     ),
                     f"{prefixed_interface_slug}__search": ModelChoiceField(
