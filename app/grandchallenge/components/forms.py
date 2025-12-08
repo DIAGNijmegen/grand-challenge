@@ -169,11 +169,14 @@ class AdditionalInputsMixin(UserMixin):
 class MultipleCIVForm(Form):
     possible_widgets = InterfaceFormFieldsFactory.possible_widgets
 
-    def __init__(self, *args, instance, base_obj, user, **kwargs):  # noqa C901
+    def __init__(  # noqa C901
+        self, *args, instance, base_obj, user, form_id, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.instance = instance
         self.user = user
         self.base_obj = base_obj
+        self.id = form_id
 
         # add fields for all interfaces that already exist on
         # other display sets / archive items
@@ -336,10 +339,12 @@ class SingleCIVForm(Form):
         interface,
         base_obj,
         user,
+        form_id,
         htmx_url,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        self.id = form_id
         data = kwargs.get("data")
 
         try:
@@ -369,7 +374,7 @@ class SingleCIVForm(Form):
             "hx-get": htmx_url,
             "hx-trigger": "interfaceSelected",
             "disabled": selected_interface is not None,
-            "hx-target": f"#form-{kwargs['auto_id']}",
+            "hx-target": f"#form-{form_id}",
             "hx-swap": "outerHTML",
             "hx-include": "this",
         }
@@ -390,7 +395,7 @@ class SingleCIVForm(Form):
             widget_kwargs["url"] = (
                 "components:component-interface-autocomplete"
             )
-            interface_field_name = f"interface-{kwargs['auto_id']}"
+            interface_field_name = f"interface-{form_id}"
             widget_kwargs["forward"] = [interface_field_name]
         widget_kwargs["attrs"] = attrs
 
