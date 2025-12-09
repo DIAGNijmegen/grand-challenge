@@ -1166,9 +1166,12 @@ class AlgorithmInterfacePermissionMixin(AccessMixin):
         return get_object_or_404(Algorithm, slug=self.kwargs["slug"])
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.has_perm(
-            "change_algorithm", self.algorithm
-        ) and request.user.has_perm("algorithms.add_algorithm"):
+        if (
+            request.user.has_perm("change_algorithm", self.algorithm)
+            and request.user.has_perm("algorithms.add_algorithm")
+        ) or request.user.has_perm(
+            "algorithms.configure_algorithm_interfaces"
+        ):
             return super().dispatch(request, *args, **kwargs)
         else:
             return self.handle_no_permission()
