@@ -627,6 +627,8 @@ def _validate_docker_image_manifest(*, instance) -> str:
             f"{desired_arch!r}."
         )
 
+    instance.api_method = _get_image_api_method(config=config)
+
     if instance._meta.model_name != "method":
         # TODO Methods are currently allowed to be duplicated
         model = apps.get_model(
@@ -734,6 +736,27 @@ def _get_image_config_file(
         )
 
     return {"image_sha256": image_sha256, "config": config}
+
+
+def _get_image_api_method(*, config):
+    from grandchallenge.components.models import APIMethodChoices
+
+    label = "org.grand-challenge.api-method"
+    allowed_values = APIMethodChoices.values
+
+    for key, value in config["config"].get("Labels", {}).items():
+        if key.lower() == label:
+            cleaned_value = (
+                value.lower().replace("'", "").replace('"', "").strip()
+            )
+            if cleaned_value in allowed_values:
+                return cleaned_value
+            else:
+                raise ValidationError(
+                    f"The label {label} must be one of {allowed_values}, instead we found '{value}'."
+                )
+    else:
+        return "exec"
 
 
 def lock_for_utilization_update(*, algorithm_image_pk):

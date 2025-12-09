@@ -24,7 +24,7 @@ from django.core.validators import (
     RegexValidator,
 )
 from django.db import models, transaction
-from django.db.models import IntegerChoices, QuerySet
+from django.db.models import IntegerChoices, QuerySet, TextChoices
 from django.db.transaction import on_commit
 from django.forms import ModelChoiceField
 from django.template.defaultfilters import truncatewords
@@ -2010,6 +2010,11 @@ class ImportStatusChoices(IntegerChoices):
     COMPLETED = 6, "Completed"
 
 
+class APIMethodChoices(TextChoices):
+    EXEC = "exec", "Exec"
+    INVOKE = "invoke", "Invoke"
+
+
 class ComponentImageManager(models.Manager):
     def executable_images(self):
         return self.filter(
@@ -2049,6 +2054,12 @@ class ComponentImage(FieldChangeMixin, models.Model):
         ),
         storage=private_s3_storage,
         max_length=255,
+    )
+    api_method = models.CharField(
+        editable=False,
+        max_length=6,
+        choices=APIMethodChoices,
+        default=APIMethodChoices.EXEC,
     )
     image_sha256 = models.CharField(editable=False, max_length=71)
     latest_shimmed_version = models.CharField(
@@ -2244,6 +2255,12 @@ class ComponentImage(FieldChangeMixin, models.Model):
 
     class Meta:
         abstract = True
+        constraints = (
+            models.CheckConstraint(
+                condition=models.Q(api_method__in=APIMethodChoices.values),
+                name="%(app_label)s_%(class)s_api_method_in_choices",
+            ),
+        )
 
     @property
     def animate(self):
