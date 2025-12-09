@@ -744,7 +744,9 @@ def _get_image_api_method(*, config):
     label = "org.grand-challenge.api-method"
     allowed_values = APIMethodChoices.values
 
-    for key, value in config["config"].get("Labels", {}).items():
+    labels = config["config"].get("Labels") or {}
+
+    for key, value in labels.items():
         if str(key).lower().strip() == label:
             cleaned_value = (
                 str(value).lower().replace("'", "").replace('"', "").strip()
