@@ -332,7 +332,7 @@ async function preprocessDicomFile(file) {
     return new File([newBuffer], file.name, { type: file.type });
 }
 
-export class DicomDeidentifierPlugin extends Uppy.Core.BasePlugin {
+class DicomDeidentifierPlugin extends Uppy.Core.BasePlugin {
     constructor(uppy, opts) {
         super(uppy, opts);
 
@@ -370,6 +370,8 @@ export class DicomDeidentifierPlugin extends Uppy.Core.BasePlugin {
         this.uppy.removePreProcessor(this.prepareUpload);
     }
 }
+
+export { DicomDeidentifierPlugin };
 
 // Export for testing in Node.js environment
 if (typeof module !== "undefined" && module.exports) {
