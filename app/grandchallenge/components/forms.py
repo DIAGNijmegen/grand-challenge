@@ -237,14 +237,11 @@ class AdditionalInputsMixin(InterfaceFormFieldsMixin, UserMixin):
 class MultipleCIVForm(InterfaceFormFieldsMixin, Form):
     possible_widgets = InterfaceFormFieldsFactory.possible_widgets
 
-    def __init__(  # noqa C901
-        self, *args, instance, base_obj, user, form_id, **kwargs
-    ):
+    def __init__(self, *args, instance, base_obj, user, **kwargs):  # noqa C901
         super().__init__(*args, **kwargs)
         self.instance = instance
         self.user = user
         self.base_obj = base_obj
-        self.id = form_id
 
         # add fields for all interfaces that already exist on
         # other display sets / archive items
