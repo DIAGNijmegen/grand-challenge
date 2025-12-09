@@ -1834,6 +1834,7 @@ class ComponentJob(FieldChangeMixin, UUIDModel):
             "memory_limit": self.requires_memory_gb,
             "use_warm_pool": self.use_warm_pool,
             "signing_key": self.signing_key,
+            "api_method": self.container.api_method,
         }
 
     def get_executor(self, *, backend):

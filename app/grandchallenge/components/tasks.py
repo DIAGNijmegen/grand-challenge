@@ -745,9 +745,9 @@ def _get_image_api_method(*, config):
     allowed_values = APIMethodChoices.values
 
     for key, value in config["config"].get("Labels", {}).items():
-        if key.lower() == label:
+        if str(key).lower().strip() == label:
             cleaned_value = (
-                value.lower().replace("'", "").replace('"', "").strip()
+                str(value).lower().replace("'", "").replace('"', "").strip()
             )
             if cleaned_value in allowed_values:
                 return cleaned_value
@@ -756,7 +756,7 @@ def _get_image_api_method(*, config):
                     f"The label {label} must be one of {allowed_values}, instead we found '{value}'."
                 )
     else:
-        return "exec"
+        return APIMethodChoices.EXEC
 
 
 def lock_for_utilization_update(*, algorithm_image_pk):
