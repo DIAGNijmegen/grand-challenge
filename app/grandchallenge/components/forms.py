@@ -111,7 +111,74 @@ class ContainerImageForm(SaveFormInitMixin, ModelForm):
         fields = ("user_upload", "creator", "comment")
 
 
-class AdditionalInputsMixin(UserMixin):
+class InterfaceFormFieldsMixin:
+    def full_clean(self):
+        # Mark selected widgets as required for validation
+        fields_required = {}
+        for name in self.fields:
+            if name.startswith(INTERFACE_FORM_FIELD_PREFIX) and name.endswith(
+                "__widget_choice"
+            ):
+                base_name = name[: -len("__widget_choice")]
+                bound_field = self[name]
+                for choice, field_name in {
+                    "IMAGE_SEARCH": f"{base_name}__search",
+                    "IMAGE_UPLOAD": f"{base_name}__upload",
+                }.items():
+                    if bound_field.data == choice:
+                        fields_required[field_name] = self[
+                            field_name
+                        ].field.required
+                        self[field_name].field.required = True
+
+        super().full_clean()
+
+        # Reset `required` to avoid javascript validation.
+        # Items may otherwise get a "Please fill out this field" tooltip
+        # blocking submission. This will lead to issues if this field is no
+        # longer the selected choice. (The widget is then not focusable.)
+        for field_name, required in fields_required.items():
+            self[field_name].field.required = required
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        keys_to_remove = []
+        keys_to_rename = []
+
+        for key, choice in cleaned_data.items():
+            if key.startswith(INTERFACE_FORM_FIELD_PREFIX) and key.endswith(
+                "__widget_choice"
+            ):
+                base_key = key[: -len("__widget_choice")]
+                widget_fields = {
+                    "IMAGE_SELECTED": key,
+                    "IMAGE_SEARCH": f"{base_key}__search",
+                    "IMAGE_UPLOAD": f"{base_key}__upload",
+                }
+
+                for widget_type, widget_key in widget_fields.items():
+                    if choice == widget_type:
+                        if widget_key in cleaned_data:
+                            keys_to_rename.append((widget_key, base_key))
+                    else:
+                        if widget_key in cleaned_data:
+                            keys_to_remove.append(widget_key)
+                        if widget_key in self.errors:
+                            # Ignore validation errors if it is not the selected choice.
+                            del self._errors[widget_key]
+
+        for key in keys_to_remove:
+            del cleaned_data[key]
+
+        for key, new_key in keys_to_rename:
+            value = cleaned_data.pop(key)
+            cleaned_data[new_key] = value
+
+        return cleaned_data
+
+
+class AdditionalInputsMixin(InterfaceFormFieldsMixin, UserMixin):
 
     def __init__(self, *args, additional_inputs, **kwargs):
         self._additional_inputs = additional_inputs
@@ -166,7 +233,7 @@ class AdditionalInputsMixin(UserMixin):
         return cleaned_data
 
 
-class MultipleCIVForm(Form):
+class MultipleCIVForm(InterfaceFormFieldsMixin, Form):
     possible_widgets = InterfaceFormFieldsFactory.possible_widgets
 
     def __init__(  # noqa C901
