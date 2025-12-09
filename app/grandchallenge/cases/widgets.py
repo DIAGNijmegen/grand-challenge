@@ -53,7 +53,7 @@ class ImageSourceChoiceField(ChoiceField):
     ):
         self.current_socket_value = current_socket_value
 
-        choices = []
+        choices = kwargs.pop("choices", [])
 
         if current_socket_value is None:
             choice = ImageWidgetChoices.UNDEFINED
