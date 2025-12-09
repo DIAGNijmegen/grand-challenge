@@ -12,7 +12,7 @@ const initChoiceWidgets = () => {
         );
 
         if (!searchWidget || !uploadWidget) {
-            return;
+            continue;
         }
 
         searchWidget.classList.toggle("d-none", el.value !== "IMAGE_SEARCH");
