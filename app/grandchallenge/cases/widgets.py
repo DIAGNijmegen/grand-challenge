@@ -30,7 +30,7 @@ from grandchallenge.uploads.widgets import (
 
 
 class ImageWidgetChoices(TextChoices):
-    UNDEFINED = "UNDEFINED", "Choose data source..."
+    UNDEFINED = "", "Choose data source..."
     IMAGE_SELECTED = "IMAGE_SELECTED", ""
     IMAGE_SEARCH = "IMAGE_SEARCH", "Select an existing image"
     IMAGE_UPLOAD = "IMAGE_UPLOAD", "Upload a new image"
@@ -47,7 +47,6 @@ class ImageSourceChoiceField(ChoiceField):
     def __init__(
         self,
         *args,
-        initial=ImageWidgetChoices.UNDEFINED,
         current_socket_value=None,
         **kwargs,
     ):
@@ -76,7 +75,6 @@ class ImageSourceChoiceField(ChoiceField):
             *args,
             required=True,
             choices=choices,
-            initial=initial,
             **kwargs,
         )
 
