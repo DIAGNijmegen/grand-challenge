@@ -171,6 +171,30 @@ def test_flexible_image_field_validation():
 
 
 @pytest.mark.django_db
+def test_image_search_validates_image_dicom_kind():
+    user = UserFactory()
+    image_panimg = ImageFactory()
+    image_dicom = ImageFactory(dicom_image_set=DICOMImageSetFactory())
+    assign_perm("cases.view_image", user, image_panimg)
+    assign_perm("cases.view_image", user, image_dicom)
+    ci_panimg = ComponentInterfaceFactory(
+        kind=ComponentInterface.Kind.PANIMG_IMAGE
+    )
+    ci_dicom = ComponentInterfaceFactory(
+        kind=ComponentInterface.Kind.DICOM_IMAGE_SET
+    )
+    field_panimg = FlexibleImageField(user=user, interface=ci_panimg)
+    field_dicom = FlexibleImageField(user=user, interface=ci_dicom)
+
+    assert field_panimg.clean([str(image_panimg.pk), None]) == image_panimg
+    with pytest.raises(ValidationError):
+        field_panimg.clean([str(image_dicom.pk), None])
+    assert field_dicom.clean([str(image_dicom.pk), None]) == image_dicom
+    with pytest.raises(ValidationError):
+        field_dicom.clean([str(image_panimg.pk), None])
+
+
+@pytest.mark.django_db
 def test_flexible_image_widget_prepopulated_value():
     user_with_perm, user_without_perm = UserFactory.create_batch(2)
     im = ImageFactory(name="test_image")
