@@ -42,7 +42,7 @@ class ImageSourceChoiceWidget(Select):
 
 
 class ImageSourceChoiceField(ChoiceField):
-    widget = ImageSourceChoiceWidget
+    widget = ImageSourceChoiceWidget(attrs={"class": "custom-select"})
 
     def __init__(
         self,

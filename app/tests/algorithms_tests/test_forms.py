@@ -215,7 +215,7 @@ def test_algorithm_create(client, uploaded_image):
                 "title": "some-overlay",
             },
             [
-                '<select class="select form-control"',
+                '<select class="custom-select"',
                 f'name="widget-choice-{INTERFACE_FORM_FIELD_PREFIX}some-overlay"',
             ],
         ),
@@ -225,8 +225,18 @@ def test_algorithm_create(client, uploaded_image):
                 "title": "some-medical-image",
             },
             [
-                '<select class="select form-control"',
+                '<select class="custom-select"',
                 f'name="widget-choice-{INTERFACE_FORM_FIELD_PREFIX}some-medical-image"',
+            ],
+        ),
+        (
+            {
+                "kind": InterfaceKindChoices.DICOM_IMAGE_SET,
+                "title": "some-medical-image",
+            },
+            [
+                '<select class="custom-select"',
+                f'name="flexible_widget_choice{INTERFACE_FORM_FIELD_PREFIX}some-medical-image"',
             ],
         ),
         (
@@ -357,7 +367,7 @@ def test_algorithm_create(client, uploaded_image):
                 "store_in_database": False,
             },
             [
-                '<select class="select form-control"',
+                '<select class="custom-select"',
                 f'name="widget-choice-{INTERFACE_FORM_FIELD_PREFIX}anything"',
             ],
         ),
