@@ -159,6 +159,8 @@ class InterfaceFormFieldsMixin:
             if key.startswith(
                 "flexible_widget_choice" + INTERFACE_FORM_FIELD_PREFIX
             ):
+                # Get the choice from the data because if it is "IMAGE_SELECTED"
+                # the cleaned data becomes the current socket value
                 choice = self[key].data
                 base_key = key[len("flexible_widget_choice") :]
                 widget_fields = {
