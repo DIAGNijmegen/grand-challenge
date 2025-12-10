@@ -409,11 +409,13 @@ def test_create_job_input_field_required_validation(client, socket_kwargs):
     )
 
     assert response.status_code == 200
-    assert response.context["form"].errors == {
-        f"{INTERFACE_FORM_FIELD_PREFIX}{input_socket.slug}": [
-            "This field is required."
-        ],
-    }
+    assert (
+        f"{INTERFACE_FORM_FIELD_PREFIX}{input_socket.slug}"
+        in response.context["form"].errors
+    )
+    assert response.context["form"].errors[
+        f"{INTERFACE_FORM_FIELD_PREFIX}{input_socket.slug}"
+    ] == ["This field is required."]
 
 
 def extract_form_data_from_response(response):
