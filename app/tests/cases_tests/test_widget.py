@@ -45,7 +45,7 @@ def test_flexible_image_field_validation():
     assign_perm("cases.view_image", user, im1)
     ci = ComponentInterfaceFactory(kind=ComponentInterface.Kind.PANIMG_IMAGE)
     prefixed_interface_slug = f"{INTERFACE_FORM_FIELD_PREFIX}{ci.slug}"
-    field = FlexibleImageField(user=user)
+    field = FlexibleImageField(user=user, interface=ci)
 
     parsed_value_for_empty_data = field.widget.value_from_datadict(
         data=QueryDict(""), name=prefixed_interface_slug, files={}
