@@ -6,8 +6,8 @@ from django.http import QueryDict
 from guardian.shortcuts import assign_perm
 
 from grandchallenge.cases.widgets import (
+    DICOM_UPLOAD_WIDGET_SUFFIXES,
     DICOMUploadField,
-    DICOMUploadWidgetSuffixes,
     DICOMUploadWithName,
     FlexibleImageField,
 )
@@ -222,10 +222,10 @@ def test_dicom_upload_field_validation():
     )
     parsed_value_for_upload_from_user = field.widget.value_from_datadict(
         data={
-            f"{prefixed_interface_slug}_{DICOMUploadWidgetSuffixes[1]}": [
+            f"{prefixed_interface_slug}_{DICOM_UPLOAD_WIDGET_SUFFIXES[1]}": [
                 str(upload1.pk)
             ],
-            f"{prefixed_interface_slug}_{DICOMUploadWidgetSuffixes[0]}": "test_image",
+            f"{prefixed_interface_slug}_{DICOM_UPLOAD_WIDGET_SUFFIXES[0]}": "test_image",
         },
         name=f"{prefixed_interface_slug}",
         files={},
@@ -246,10 +246,10 @@ def test_dicom_upload_field_validation():
     )
     parsed_value_from_upload_from_other_user = field.widget.value_from_datadict(
         data={
-            f"{prefixed_interface_slug}_{DICOMUploadWidgetSuffixes[1]}": [
+            f"{prefixed_interface_slug}_{DICOM_UPLOAD_WIDGET_SUFFIXES[1]}": [
                 str(upload2.pk)
             ],
-            f"{prefixed_interface_slug}_{DICOMUploadWidgetSuffixes[0]}": "test_image_2",
+            f"{prefixed_interface_slug}_{DICOM_UPLOAD_WIDGET_SUFFIXES[0]}": "test_image_2",
         },
         name=f"{prefixed_interface_slug}",
         files={},

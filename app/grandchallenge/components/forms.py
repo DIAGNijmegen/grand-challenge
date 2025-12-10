@@ -18,7 +18,7 @@ from django.utils.functional import empty
 from django.utils.text import format_lazy
 
 from grandchallenge.algorithms.models import AlgorithmImage
-from grandchallenge.cases.widgets import DICOMUploadWidgetSuffixes
+from grandchallenge.cases.widgets import DICOM_UPLOAD_WIDGET_SUFFIXES
 from grandchallenge.components.backends.exceptions import (
     CIVNotEditableException,
 )
@@ -258,7 +258,8 @@ class MultipleCIVForm(Form):
     @staticmethod
     def parse_slug(*, slug):
         interface_slug = slug[len(INTERFACE_FORM_FIELD_PREFIX) :]
-        for known_suffix in DICOMUploadWidgetSuffixes:
+
+        for known_suffix in DICOM_UPLOAD_WIDGET_SUFFIXES:
             if interface_slug.endswith(f"_{known_suffix}"):
                 base_slug = interface_slug[: -len(f"_{known_suffix}")]
                 return base_slug
