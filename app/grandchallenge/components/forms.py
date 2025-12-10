@@ -288,7 +288,7 @@ class MultipleCIVForm(InterfaceFormFieldsMixin, Form):
                 current_socket_value = instance.values.filter(
                     interface__slug=interface.slug
                 ).first()
-                current_socket_value = current_value
+
                 if not current_value:
                     current_value = current_socket_value
 
