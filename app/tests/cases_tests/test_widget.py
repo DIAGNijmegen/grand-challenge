@@ -286,7 +286,7 @@ def test_dicom_upload_widget_prepopulated_value():
     )
     field = fields[f"flexible_widget_choice{prefixed_interface_slug}"]
     assert field.current_socket_value == civ
-    assert field.clean("IMAGE_SELECTED") == civ
+    assert field.clean("IMAGE_SELECTED") == civ.image
 
     # Should not be able to select "undefined"
     with pytest.raises(ValidationError, match="Select a valid choice."):

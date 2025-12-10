@@ -82,7 +82,7 @@ class ImageSourceChoiceField(ChoiceField):
     def clean(self, value):
         value = super().clean(value)
         if value == ImageWidgetChoices.IMAGE_SELECTED:
-            return self.current_socket_value
+            return self.current_socket_value.image
         else:
             return value
 
