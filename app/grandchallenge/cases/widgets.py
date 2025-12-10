@@ -6,7 +6,6 @@ from django.db.models import QuerySet, TextChoices
 from django.forms import (
     CharField,
     ChoiceField,
-    ChoiceWidget,
     HiddenInput,
     ModelChoiceField,
     ModelMultipleChoiceField,
@@ -15,6 +14,7 @@ from django.forms import (
     Select,
     TextInput,
 )
+from django.forms.widgets import ChoiceWidget
 
 from grandchallenge.cases.models import Image
 from grandchallenge.components.models import ComponentInterfaceValue
