@@ -113,7 +113,9 @@ class InterfaceFormFieldsFactory:
                         queryset=image_search_queryset,
                         label="",
                         required=False,
-                        widget=ImageSearchWidget(name=prefixed_interface_slug),
+                        widget=ImageSearchWidget(
+                            prefixed_interface_slug=prefixed_interface_slug
+                        ),
                     ),
                 }
             else:
