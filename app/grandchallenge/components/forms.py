@@ -23,6 +23,7 @@ from grandchallenge.components.backends.exceptions import (
     CIVNotEditableException,
 )
 from grandchallenge.components.form_fields import (
+    FLEXIBLE_WIDGET_PREFIXES,
     INTERFACE_FORM_FIELD_PREFIX,
     InterfaceFormFieldsFactory,
 )
@@ -144,9 +145,17 @@ class InterfaceFormFieldsMixin:
         cleaned_data = super().clean()
 
         keys_to_remove = []
-        keys_to_rename = []
+        data_to_add = {}
 
         for key, choice in cleaned_data.items():
+            if any(
+                [
+                    key.startswith(flex_prefix + INTERFACE_FORM_FIELD_PREFIX)
+                    for flex_prefix in FLEXIBLE_WIDGET_PREFIXES
+                ]
+            ):
+                keys_to_remove.append(key)
+
             if key.startswith(
                 "flexible_widget_choice" + INTERFACE_FORM_FIELD_PREFIX
             ):
@@ -159,21 +168,19 @@ class InterfaceFormFieldsMixin:
 
                 for widget_type, widget_key in widget_fields.items():
                     if choice == widget_type:
-                        if widget_key in cleaned_data:
-                            keys_to_rename.append((widget_key, base_key))
+                        try:
+                            data_to_add[base_key] = cleaned_data[widget_key]
+                        except KeyError:
+                            pass
                     else:
-                        if widget_key in cleaned_data:
-                            keys_to_remove.append(widget_key)
                         if widget_key in self.errors:
                             # Ignore validation errors if it is not the selected choice.
                             del self._errors[widget_key]
 
+        cleaned_data.update(data_to_add)
+
         for key in keys_to_remove:
             del cleaned_data[key]
-
-        for key, new_key in keys_to_rename:
-            value = cleaned_data.pop(key)
-            cleaned_data[new_key] = value
 
         return cleaned_data
 
