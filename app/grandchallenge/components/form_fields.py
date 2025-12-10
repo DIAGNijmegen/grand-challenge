@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import TextChoices
-from django.forms import ModelChoiceField, MultiValueField
+from django.forms import Field, HiddenInput, ModelChoiceField, MultiValueField
 
 from grandchallenge.cases.models import Image
 from grandchallenge.cases.widgets import (
@@ -116,6 +116,9 @@ class InterfaceFormFieldsFactory:
                         widget=ImageSearchWidget(
                             prefixed_interface_slug=prefixed_interface_slug
                         ),
+                    ),
+                    f"{prefixed_interface_slug}": Field(
+                        required=required, widget=HiddenInput()
                     ),
                 }
             else:
