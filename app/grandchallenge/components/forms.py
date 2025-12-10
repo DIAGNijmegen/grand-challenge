@@ -333,10 +333,12 @@ class SingleCIVForm(Form):
         interface,
         base_obj,
         user,
+        form_id,
         htmx_url,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        self.id = form_id
         data = kwargs.get("data")
 
         try:
@@ -366,7 +368,7 @@ class SingleCIVForm(Form):
             "hx-get": htmx_url,
             "hx-trigger": "interfaceSelected",
             "disabled": selected_interface is not None,
-            "hx-target": f"#form-{kwargs['auto_id']}",
+            "hx-target": f"#form-{form_id}",
             "hx-swap": "outerHTML",
             "hx-include": "this",
         }
@@ -387,7 +389,7 @@ class SingleCIVForm(Form):
             widget_kwargs["url"] = (
                 "components:component-interface-autocomplete"
             )
-            interface_field_name = f"interface-{kwargs['auto_id']}"
+            interface_field_name = f"interface-{form_id}"
             widget_kwargs["forward"] = [interface_field_name]
         widget_kwargs["attrs"] = attrs
 
