@@ -218,8 +218,11 @@ class MultipleCIVForm(Form):
             interface_slug = self.parse_slug(slug=slug)
 
             if (
-                ComponentInterface.objects.filter(slug=interface_slug).exists()
+                interface_slug
                 and slug not in self.fields.keys()
+                and ComponentInterface.objects.filter(
+                    slug=interface_slug
+                ).exists()
             ):
                 interface = ComponentInterface.objects.filter(
                     slug=interface_slug
@@ -257,6 +260,9 @@ class MultipleCIVForm(Form):
 
     @staticmethod
     def parse_slug(*, slug):
+        if not slug.startswith(INTERFACE_FORM_FIELD_PREFIX):
+            return None
+
         interface_slug = slug[len(INTERFACE_FORM_FIELD_PREFIX) :]
 
         for known_suffix in DICOM_UPLOAD_WIDGET_SUFFIXES:
