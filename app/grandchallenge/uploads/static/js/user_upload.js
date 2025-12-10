@@ -1,4 +1,3 @@
-import { DicomDeidentifierPlugin } from "./dicom_deidentification.mjs";
 {
     function initializeWidgets() {
         const widgets = document.getElementsByClassName("user-upload");

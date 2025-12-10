@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.forms import Script
 from django.forms.widgets import HiddenInput, MultipleHiddenInput
 
 
@@ -26,7 +25,7 @@ class UserUploadWidgetMixin:
         css = {"all": ("vendored/uppy/uppy.min.css",)}
         js = (
             "vendored/uppy/uppy.min.js",
-            Script("js/user_upload.mjs", type="module"),
+            "js/user_upload.js",
         )
 
 
@@ -46,10 +45,7 @@ class DICOMUserUploadMultipleWidget(UserUploadMultipleWidget):
         js = (
             "vendored/@diagnijmegen/rse-grand-challenge-dicom-de-id-procedure/dist/grand-challenge-dicom-de-id-procedure.umd.min.js",
             "vendored/dcmjs/build/dcmjs.min.js",
-            Script(
-                "js/dicom_deidentification.mjs",
-                type="module",
-            ),
+            "js/dicom_deidentification.js",
         )
 
     def __init__(self, *args, **kwargs):
