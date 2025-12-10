@@ -5,11 +5,14 @@ from django.core.exceptions import ValidationError
 from django.db.models import QuerySet, TextChoices
 from django.forms import (
     CharField,
+    ChoiceField,
     HiddenInput,
     ModelChoiceField,
     ModelMultipleChoiceField,
     MultiValueField,
     MultiWidget,
+    Script,
+    Select,
 )
 from django.forms.widgets import ChoiceWidget, TextInput
 
@@ -27,10 +30,61 @@ from grandchallenge.uploads.widgets import (
 
 
 class ImageWidgetChoices(TextChoices):
-    IMAGE_SEARCH = "IMAGE_SEARCH"
-    IMAGE_UPLOAD = "IMAGE_UPLOAD"
-    IMAGE_SELECTED = "IMAGE_SELECTED"
-    UNDEFINED = "UNDEFINED"
+    UNDEFINED = "", "Choose data source..."
+    IMAGE_SELECTED = "IMAGE_SELECTED", ""
+    IMAGE_SEARCH = "IMAGE_SEARCH", "Select an existing image"
+    IMAGE_UPLOAD = "IMAGE_UPLOAD", "Upload a new image"
+
+
+class ImageSourceChoiceWidget(Select):
+    class Media:
+        js = (Script("cases/js/source_choice_widget.mjs", type="module"),)
+
+
+class ImageSourceChoiceField(ChoiceField):
+    widget = ImageSourceChoiceWidget(attrs={"class": "custom-select"})
+
+    def __init__(
+        self,
+        *args,
+        current_socket_value=None,
+        required=True,
+        **kwargs,
+    ):
+        self.current_socket_value = current_socket_value
+
+        choices = kwargs.pop("choices", [])
+
+        if current_socket_value is None:
+            choice = ImageWidgetChoices.UNDEFINED
+            choices.append((choice.value, choice.label))
+        else:
+            choices.append(
+                (
+                    ImageWidgetChoices.IMAGE_SELECTED.value,
+                    current_socket_value.title,
+                )
+            )
+
+        for choice in [
+            ImageWidgetChoices.IMAGE_SEARCH,
+            ImageWidgetChoices.IMAGE_UPLOAD,
+        ]:
+            choices.append((choice.value, choice.label))
+
+        super().__init__(
+            *args,
+            required=required,
+            choices=choices,
+            **kwargs,
+        )
+
+    def clean(self, value):
+        value = super().clean(value)
+        if value == ImageWidgetChoices.IMAGE_SELECTED:
+            return self.current_socket_value.image
+        else:
+            return value
 
 
 class ImageSearchWidget(ChoiceWidget, HiddenInput):
@@ -38,15 +92,19 @@ class ImageSearchWidget(ChoiceWidget, HiddenInput):
     input_type = None
     name = None
 
-    def __init__(self, *args, name=None, **kwargs):
+    def __init__(
+        self, *args, name=None, prefixed_interface_slug=None, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         if name:
             self.name = name
+        self.prefixed_interface_slug = prefixed_interface_slug
 
     def get_context(self, name, value, attrs):
         context = super().get_context(name, value, attrs)
         if self.name:
             context["widget"]["name"] = self.name
+        context["prefixed_interface_slug"] = self.prefixed_interface_slug
         return context
 
 
@@ -211,7 +269,7 @@ class FlexibleImageField(MultiValueField):
             return non_empty_values[0]
 
 
-DICOMUploadWidgetSuffixes = ["dicom-image-name", "dicom-user-uploads"]
+DICOM_UPLOAD_WIDGET_SUFFIXES = ["dicom-image-name", "dicom-user-uploads"]
 
 
 class DICOMUploadWithName(NamedTuple):
@@ -226,12 +284,10 @@ class DICOMImageSetNameInput(TextInput):
 
 
 class DICOMUploadWidget(MultiWidget):
-    template_name = "cases/dicom_upload_widget.html"
-
     def __init__(self, attrs=None):
         widgets = {
-            DICOMUploadWidgetSuffixes[0]: DICOMImageSetNameInput(),
-            DICOMUploadWidgetSuffixes[1]: DICOMUserUploadMultipleWidget(),
+            DICOM_UPLOAD_WIDGET_SUFFIXES[0]: DICOMImageSetNameInput(),
+            DICOM_UPLOAD_WIDGET_SUFFIXES[1]: DICOMUserUploadMultipleWidget(),
         }
         super().__init__(widgets, attrs)
 
@@ -247,7 +303,7 @@ class DICOMUploadWidget(MultiWidget):
 class DICOMUploadField(MultiValueField):
     widget = DICOMUploadWidget
 
-    def __init__(self, *args, user, initial=None, **kwargs):
+    def __init__(self, *args, user, **kwargs):
         upload_qs = filter_by_permission(
             queryset=UserUpload.objects.all(),
             user=user,
@@ -259,38 +315,9 @@ class DICOMUploadField(MultiValueField):
             ModelMultipleChoiceField(queryset=upload_qs),
         ]
 
-        self.current_value = None
-        if initial:
-            # Initial data can only be an image CIV.
-            # We don't want to show the widgets in this case, and instead
-            # display the current image name, so pass the image as
-            # current_value to the widget template
-            if isinstance(initial, ComponentInterfaceValue):
-                if image := get_object_if_allowed(
-                    model=Image,
-                    pk=initial.image.pk,
-                    user=user,
-                    codename="view_image",
-                ):
-                    self.current_value = image
-                    # turn initial to the internal data type that this widget expects
-                    initial = self.compress(
-                        values=[
-                            image.name,
-                            image.dicom_image_set.dicom_image_set_upload.user_uploads.all(),
-                        ]
-                    )
-                else:
-                    initial = None
-            else:
-                raise RuntimeError(
-                    f"Unexpected initial value of type {type(initial)}"
-                )
-
         super().__init__(
             *args,
             fields=fields,
-            initial=initial,
             **kwargs,
         )
 
@@ -299,8 +326,3 @@ class DICOMUploadField(MultiValueField):
             name=values[0] if values else "",
             user_uploads=[str(v.pk) for v in values[1]] if values else [],
         )
-
-    def widget_attrs(self, widget):
-        attrs = super().widget_attrs(widget)
-        attrs["current_value"] = self.current_value
-        return attrs
