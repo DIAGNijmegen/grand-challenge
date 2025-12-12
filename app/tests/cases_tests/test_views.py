@@ -135,7 +135,6 @@ def test_image_search_view(client):
         },
     )
     assert response.status_code == 200
-    assert len(response.context_data["object_list"]) == 1
     assert response.context_data["object_list"].get() == images[1]
 
     response = get_view_for_user(
@@ -165,7 +164,6 @@ def test_image_search_view(client):
         },
     )
     assert response.status_code == 200
-    assert len(response.context_data["object_list"]) == 1
     assert response.context_data["object_list"].get() == images_dicom[1]
 
     response = get_view_for_user(
