@@ -18,7 +18,7 @@ from django.utils.functional import empty
 from django.utils.text import format_lazy
 
 from grandchallenge.algorithms.models import AlgorithmImage
-from grandchallenge.cases.widgets import DICOMUploadWidgetSuffixes
+from grandchallenge.cases.widgets import DICOM_UPLOAD_WIDGET_SUFFIXES
 from grandchallenge.components.backends.exceptions import (
     CIVNotEditableException,
 )
@@ -218,8 +218,11 @@ class MultipleCIVForm(Form):
             interface_slug = self.parse_slug(slug=slug)
 
             if (
-                ComponentInterface.objects.filter(slug=interface_slug).exists()
+                interface_slug
                 and slug not in self.fields.keys()
+                and ComponentInterface.objects.filter(
+                    slug=interface_slug
+                ).exists()
             ):
                 interface = ComponentInterface.objects.filter(
                     slug=interface_slug
@@ -257,8 +260,12 @@ class MultipleCIVForm(Form):
 
     @staticmethod
     def parse_slug(*, slug):
+        if not slug.startswith(INTERFACE_FORM_FIELD_PREFIX):
+            return None
+
         interface_slug = slug[len(INTERFACE_FORM_FIELD_PREFIX) :]
-        for known_suffix in DICOMUploadWidgetSuffixes:
+
+        for known_suffix in DICOM_UPLOAD_WIDGET_SUFFIXES:
             if interface_slug.endswith(f"_{known_suffix}"):
                 base_slug = interface_slug[: -len(f"_{known_suffix}")]
                 return base_slug
@@ -332,10 +339,12 @@ class SingleCIVForm(Form):
         interface,
         base_obj,
         user,
+        form_id,
         htmx_url,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        self.id = form_id
         data = kwargs.get("data")
 
         try:
@@ -365,7 +374,7 @@ class SingleCIVForm(Form):
             "hx-get": htmx_url,
             "hx-trigger": "interfaceSelected",
             "disabled": selected_interface is not None,
-            "hx-target": f"#form-{kwargs['auto_id']}",
+            "hx-target": f"#form-{form_id}",
             "hx-swap": "outerHTML",
             "hx-include": "this",
         }
@@ -386,7 +395,7 @@ class SingleCIVForm(Form):
             widget_kwargs["url"] = (
                 "components:component-interface-autocomplete"
             )
-            interface_field_name = f"interface-{kwargs['auto_id']}"
+            interface_field_name = f"interface-{form_id}"
             widget_kwargs["forward"] = [interface_field_name]
         widget_kwargs["attrs"] = attrs
 
