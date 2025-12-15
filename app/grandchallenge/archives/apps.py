@@ -10,8 +10,8 @@ def init_archiveitem_permissions(*_, **__):
     g, _ = Group.objects.get_or_create(
         name=settings.REGISTERED_USERS_GROUP_NAME
     )
-    assign_perm("archiveitem.change_archiveitem", g)
-    assign_perm("archiveitem.add_archiveitem", g)
+    assign_perm("archives.change_archiveitem", g)
+    assign_perm("archives.add_archiveitem", g)
 
 
 class ArchivesConfig(AppConfig):

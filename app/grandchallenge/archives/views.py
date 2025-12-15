@@ -358,7 +358,7 @@ class ArchiveItemUpdate(
     MultipleCIVProcessingBaseView,
 ):
     form_class = ArchiveItemUpdateForm
-    permission_required = "archiveitem.change_archiveitem"
+    permission_required = "archives.change_archiveitem"
     included_form_classes = (
         MultipleCIVForm,
         *MultipleCIVProcessingBaseView.included_form_classes,
