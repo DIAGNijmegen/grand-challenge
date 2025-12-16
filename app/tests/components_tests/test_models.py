@@ -1879,7 +1879,7 @@ def test_component_interface_custom_queue(kind, expected_queue, mocker):
         autospec=True,
     )
 
-    ai.validate_civ_data_objects_and_execute_linked_task(
+    ai.process_civ_data_objects_and_execute_linked_task(
         civ_data_objects=[
             CIVData(
                 interface_slug=ci.slug,
@@ -1987,7 +1987,7 @@ def test_add_and_remove_civ(object_factory, kwargs, field_name):
     ],
 )
 @pytest.mark.django_db
-def test_add_civ_through_validate_civ_data_objects_and_execute_linked_task(
+def test_add_civ_through_process_civ_data_objects_and_execute_linked_task(
     object_factory, object_kwargs, field_name, socket_kind, value_factory
 ):
     obj = object_factory(**object_kwargs)
@@ -1996,7 +1996,7 @@ def test_add_civ_through_validate_civ_data_objects_and_execute_linked_task(
     civ_data_objects = [CIVData(interface_slug=socket.slug, value=value)]
     n_values = getattr(obj, field_name).count()
 
-    obj.validate_civ_data_objects_and_execute_linked_task(
+    obj.process_civ_data_objects_and_execute_linked_task(
         civ_data_objects=civ_data_objects, user=UserFactory()
     )
 
@@ -2021,7 +2021,7 @@ def test_add_civ_through_validate_civ_data_objects_and_execute_linked_task(
     ],
 )
 @pytest.mark.django_db
-def test_validate_civ_data_objects_and_execute_linked_task_with_image_upload_session(
+def test_process_civ_data_objects_and_execute_linked_task_with_image_upload_session(
     object_factory, kwargs, field_name, mocker
 ):
     obj = object_factory(**kwargs)
@@ -2035,7 +2035,7 @@ def test_validate_civ_data_objects_and_execute_linked_task_with_image_upload_ses
         return_value=MagicMock(),
     )
 
-    obj.validate_civ_data_objects_and_execute_linked_task(
+    obj.process_civ_data_objects_and_execute_linked_task(
         civ_data_objects=civ_data_objects, user=UserFactory()
     )
 
@@ -2060,7 +2060,7 @@ def test_validate_civ_data_objects_and_execute_linked_task_with_image_upload_ses
     ],
 )
 @pytest.mark.django_db
-def test_validate_civ_data_objects_and_execute_linked_task_with_image_upload_queryset(
+def test_process_civ_data_objects_and_execute_linked_task_with_image_upload_queryset(
     object_factory, kwargs, field_name, mocker
 ):
     obj = object_factory(**kwargs)
@@ -2074,7 +2074,7 @@ def test_validate_civ_data_objects_and_execute_linked_task_with_image_upload_que
         return_value=MagicMock(),
     )
 
-    obj.validate_civ_data_objects_and_execute_linked_task(
+    obj.process_civ_data_objects_and_execute_linked_task(
         civ_data_objects=civ_data_objects, user=UserFactory()
     )
 
@@ -2099,7 +2099,7 @@ def test_validate_civ_data_objects_and_execute_linked_task_with_image_upload_que
     ],
 )
 @pytest.mark.django_db
-def test_validate_civ_data_objects_and_execute_linked_task_with_dicom_upload_with_name(
+def test_process_civ_data_objects_and_execute_linked_task_with_dicom_upload_with_name(
     object_factory, kwargs, field_name, mocker
 ):
     obj = object_factory(**kwargs)
@@ -2119,7 +2119,7 @@ def test_validate_civ_data_objects_and_execute_linked_task_with_dicom_upload_wit
         return_value=MagicMock(),
     )
 
-    obj.validate_civ_data_objects_and_execute_linked_task(
+    obj.process_civ_data_objects_and_execute_linked_task(
         civ_data_objects=civ_data_objects, user=upload.creator
     )
 
@@ -2144,7 +2144,7 @@ def test_validate_civ_data_objects_and_execute_linked_task_with_dicom_upload_wit
     ],
 )
 @pytest.mark.django_db
-def test_validate_civ_data_objects_and_execute_linked_task_with_file_upload(
+def test_process_civ_data_objects_and_execute_linked_task_with_file_upload(
     object_factory, kwargs, field_name, mocker
 ):
     obj = object_factory(**kwargs)
@@ -2156,7 +2156,7 @@ def test_validate_civ_data_objects_and_execute_linked_task_with_file_upload(
         return_value=MagicMock(),
     )
 
-    obj.validate_civ_data_objects_and_execute_linked_task(
+    obj.process_civ_data_objects_and_execute_linked_task(
         civ_data_objects=civ_data_objects, user=UserFactory()
     )
 

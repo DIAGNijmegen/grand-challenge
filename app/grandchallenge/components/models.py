@@ -2493,22 +2493,20 @@ class CIVForObjectMixin:
         if not self.is_editable:
             raise CIVNotEditableException(f"{self} is not editable.")
 
-    def validate_civ_data_objects_and_execute_linked_task(
-        self, *, civ_data_objects, user, linked_task=None
-    ):
-        for civ_data in civ_data_objects:
-            self._update_civ(
-                civ_data=civ_data,
-                user=user,
-                linked_task=linked_task,
-            )
-
-    def _update_civ(self, *, civ_data, user=None, linked_task=None):
+    def validate_civ_data_objects(self, /, civ_data_objects):
         if not self.is_editable:
             raise CIVNotEditableException(
                 f"{self} is not editable. CIVs cannot be added or removed from it.",
             )
 
+        cleaned_civ_data_objects = []
+        for civ_data in civ_data_objects:
+            clean_civ_data = self._validate_civ_data(civ_data=civ_data)
+            cleaned_civ_data_objects.append(clean_civ_data)
+
+        return cleaned_civ_data_objects
+
+    def _validate_civ_data(self, *, civ_data):
         try:
             if (
                 civ_data.interface_slug
@@ -2521,12 +2519,25 @@ class CIVForObjectMixin:
         except AttributeError:
             pass
 
-        ci = ComponentInterface.objects.get(slug=civ_data.interface_slug)
-
-        if ci.slug in RESERVED_SOCKET_SLUGS:
+        if civ_data.interface_slug in RESERVED_SOCKET_SLUGS:
             raise ValidationError(
-                f"Socket {ci.title!r} is reserved and cannot be used."
+                f"Socket {civ_data.interface_slug!r} is reserved and cannot be used."
             )
+
+        return civ_data
+
+    def process_civ_data_objects_and_execute_linked_task(
+        self, *, civ_data_objects, user, linked_task=None
+    ):
+        for civ_data in civ_data_objects:
+            self._update_civ(
+                civ_data=civ_data,
+                user=user,
+                linked_task=linked_task,
+            )
+
+    def _update_civ(self, *, civ_data, user=None, linked_task=None):
+        ci = ComponentInterface.objects.get(slug=civ_data.interface_slug)
 
         current_civ = self.get_current_value_for_interface(
             interface=ci, user=user

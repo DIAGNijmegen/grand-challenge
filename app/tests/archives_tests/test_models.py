@@ -140,7 +140,7 @@ def test_archive_item_reserved_socket_slugs():
     with pytest.raises(
         ValidationError, match="is reserved and cannot be used."
     ):
-        ai.validate_civ_data_objects_and_execute_linked_task(
+        ai.process_civ_data_objects_and_execute_linked_task(
             civ_data_objects=[
                 CIVData(
                     interface_slug=target_socket_slug,

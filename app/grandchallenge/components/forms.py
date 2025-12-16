@@ -276,9 +276,11 @@ class MultipleCIVForm(Form):
 
         return interface_slug
 
-    def process_object_data(self):
+    def clean(self):
+        cleaned_data = super().clean()
+
         civ_data_objects = []
-        for key, value in self.cleaned_data.items():
+        for key, value in cleaned_data.items():
             if key.startswith(INTERFACE_FORM_FIELD_PREFIX):
                 civ_data_objects.append(
                     CIVData(

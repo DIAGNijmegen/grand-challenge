@@ -369,8 +369,11 @@ class CIVSetPostSerializerMixin:
         )
 
         try:
-            instance.validate_civ_data_objects_and_execute_linked_task(
-                civ_data_objects=civ_data_objects, user=request.user
+            cleaned_civ_data_objects = instance.validate_civ_data_objects(
+                civ_data_objects
+            )
+            instance.process_civ_data_objects_and_execute_linked_task(
+                civ_data_objects=cleaned_civ_data_objects, user=request.user
             )
         except CIVNotEditableException as e:
             error_handler = instance.get_error_handler()
