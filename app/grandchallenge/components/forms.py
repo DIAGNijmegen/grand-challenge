@@ -288,14 +288,14 @@ class MultipleCIVForm(Form):
                         value=value,
                     )
                 )
+        self._civ_data_objects = civ_data_objects
 
-        cleaned_data["civ_data_objects"] = civ_data_objects
         return cleaned_data
 
     def process_object_data(self):
         try:
             self.instance.process_civ_data_objects_and_execute_linked_task(
-                civ_data_objects=self.cleaned_data["civ_data_objects"],
+                civ_data_objects=self._civ_data_objects,
                 user=self.user,
             )
         except CIVNotEditableException as e:
