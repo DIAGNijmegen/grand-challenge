@@ -1,13 +1,16 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import TextChoices
-from django.forms import ModelChoiceField, MultiValueField
+from django.forms import Field, HiddenInput, ModelChoiceField, MultiValueField
 
+from grandchallenge.cases.models import Image
 from grandchallenge.cases.widgets import (
     DICOMUploadField,
     FlexibleImageField,
     FlexibleImageWidget,
     ImageSearchWidget,
+    ImageSourceChoiceField,
+    ImageSourceChoiceWidget,
 )
 from grandchallenge.components.models import ComponentInterfaceValue
 from grandchallenge.components.schemas import generate_component_json_schema
@@ -40,13 +43,19 @@ file_upload_text = (
 
 
 INTERFACE_FORM_FIELD_PREFIX = "__INTERFACE_FIELD__"
+FLEXIBLE_WIDGET_PREFIXES = [
+    "flexible_widget_choice",
+    "flexible_upload",
+    "flexible_search",
+]
 
 
-class InterfaceFormFieldFactory:
+class InterfaceFormFieldsFactory:
     possible_widgets = {
         UserUploadMultipleWidget,
         UserUploadSingleWidget,
         DICOMUserUploadMultipleWidget,
+        ImageSourceChoiceWidget,
         JSONEditorWidget,
         FlexibleImageWidget,
         ImageSearchWidget,
@@ -61,7 +70,7 @@ class InterfaceFormFieldFactory:
         user=None,
         required=True,
         initial=None,
-        help_text="",
+        current_socket_value=None,
         disabled=False,
     ):
         if (
@@ -69,6 +78,10 @@ class InterfaceFormFieldFactory:
             and not initial.has_value
         ):
             initial = None
+
+        prefixed_interface_slug = (
+            f"{INTERFACE_FORM_FIELD_PREFIX}{interface.slug}"
+        )
 
         kwargs = {
             "required": required,
@@ -78,32 +91,62 @@ class InterfaceFormFieldFactory:
         }
 
         if interface.super_kind == interface.SuperKind.IMAGE:
+            image_search_queryset = filter_by_permission(
+                queryset=Image.objects.filter(
+                    dicom_image_set__isnull=not interface.is_dicom_image_kind
+                ),
+                user=user,
+                codename="view_image",
+            )
             if interface.is_dicom_image_kind:
-                return DICOMUploadField(
-                    user=user,
-                    initial=initial,
-                    **kwargs,
-                )
+                return {
+                    f"flexible_widget_choice{prefixed_interface_slug}": ImageSourceChoiceField(
+                        current_socket_value=current_socket_value,
+                        **kwargs,
+                    ),
+                    f"flexible_upload{prefixed_interface_slug}": DICOMUploadField(
+                        user=user,
+                        label="",
+                        required=False,
+                    ),
+                    f"flexible_search{prefixed_interface_slug}": ModelChoiceField(
+                        queryset=image_search_queryset,
+                        label="",
+                        required=False,
+                        widget=ImageSearchWidget(
+                            prefixed_interface_slug=prefixed_interface_slug
+                        ),
+                    ),
+                    f"{prefixed_interface_slug}": Field(
+                        required=required, widget=HiddenInput()
+                    ),
+                }
             else:
-                return FlexibleImageField(
+                return {
+                    prefixed_interface_slug: FlexibleImageField(
+                        user=user,
+                        interface=interface,
+                        initial=initial,
+                        **kwargs,
+                    )
+                }
+        elif interface.super_kind == interface.SuperKind.FILE:
+            return {
+                prefixed_interface_slug: FlexibleFileField(
                     user=user,
                     interface=interface,
                     initial=initial,
                     **kwargs,
                 )
-        elif interface.super_kind == interface.SuperKind.FILE:
-            return FlexibleFileField(
-                user=user,
-                interface=interface,
-                initial=initial,
-                **kwargs,
-            )
+            }
         elif interface.super_kind == interface.SuperKind.VALUE:
-            return cls.get_json_field(
-                interface=interface,
-                initial=initial,
-                **kwargs,
-            )
+            return {
+                prefixed_interface_slug: cls.get_json_field(
+                    interface=interface,
+                    initial=initial,
+                    **kwargs,
+                )
+            }
         else:
             raise NotImplementedError(
                 f"Unknown interface super kind: {interface.super_kind}"
