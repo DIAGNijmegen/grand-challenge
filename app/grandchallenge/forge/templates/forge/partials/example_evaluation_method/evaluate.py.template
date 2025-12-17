@@ -290,14 +290,14 @@ def read_predictions():
 
 def get_interface_key(job):
     # Each interface has a unique key that is the set of socket slugs given as input
-    socket_slugs = [sv["socket"]["slug"] for sv in job["inputs"]]
+    socket_slugs = [sv["interface"]["slug"] for sv in job["inputs"]]
     return tuple(sorted(socket_slugs))
 
 {% if object.algorithm_input_sockets|has_image_kind or object.evaluation_additional_inputs|has_image_kind %}
 def get_image_name(*, values, slug):
     # This tells us the user-provided name of the input or output image
     for value in values:
-        if value["socket"]["slug"] == slug:
+        if value["interface"]["slug"] == slug:
             return value["image"]["name"]
 
     raise RuntimeError(f"Image with interface {slug} not found!")
@@ -310,7 +310,7 @@ import re
 def get_file_name(*, values, slug):
     # This tells us the user-provided name of the input file
     for value in values:
-        if value["socket"]["slug"] == slug:
+        if value["interface"]["slug"] == slug:
             file_url = value["file"]
             pattern = r'[^/]+$'
             match = re.search(pattern, file_url)
@@ -325,8 +325,8 @@ def get_file_name(*, values, slug):
 def get_interface_relative_path(*, values, slug):
     # Gets the location of the interface relative to the input or output
     for value in values:
-        if value["socket"]["slug"] == slug:
-            return value["socket"]["relative_path"]
+        if value["interface"]["slug"] == slug:
+            return value["interface"]["relative_path"]
 
     raise RuntimeError(f"Value with interface {slug} not found!")
 
