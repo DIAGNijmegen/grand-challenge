@@ -293,35 +293,36 @@ def test_dicom_upload_field_validation():
 
 
 @pytest.mark.django_db
-def test_dicom_upload_widget_prepopulated_value():
-    user_with_perm, user_without_perm = UserFactory.create_batch(2)
+def test_dicom_image_source_choice_widget_prepopulated_value():
+    user = UserFactory()
     upload = DICOMImageSetUploadFactory()
-    upload.user_uploads.set([UserUploadFactory(creator=user_with_perm)])
+    upload.user_uploads.set([UserUploadFactory(creator=user)])
     im = ImageFactory(
         name="test_image",
         dicom_image_set=DICOMImageSetFactory(dicom_image_set_upload=upload),
     )
-    assign_perm("cases.view_image", user_with_perm, im)
     ci = ComponentInterfaceFactory(
         kind=ComponentInterface.Kind.DICOM_IMAGE_SET
     )
+    prefixed_interface_slug = f"{INTERFACE_FORM_FIELD_PREFIX}{ci.slug}"
     civ = ComponentInterfaceValueFactory(interface=ci, image=im)
 
-    field = InterfaceFormFieldsFactory(
-        interface=ci, user=user_with_perm, initial=civ
-    ).popitem()[1]
-    assert field.widget.attrs["current_value"] == civ.image
-    assert field.initial.name == civ.image.name
-    assert field.initial.user_uploads == [
-        str(upload.pk)
-        for upload in civ.image.dicom_image_set.dicom_image_set_upload.user_uploads.all()
-    ]
+    fields = InterfaceFormFieldsFactory(
+        interface=ci, user=user, current_socket_value=civ
+    )
+    field = fields[f"flexible_widget_choice{prefixed_interface_slug}"]
+    assert field.current_socket_value == civ
+    assert field.clean("IMAGE_SELECTED") == civ.image
 
-    field = InterfaceFormFieldsFactory(
-        interface=ci, user=user_without_perm, initial=civ
-    ).popitem()[1]
-    assert field.widget.attrs["current_value"] is None
-    assert field.initial is None
+    # Should not be able to select "undefined"
+    with pytest.raises(ValidationError, match="Select a valid choice."):
+        field.clean("UNDEFINED")
+
+    fields = InterfaceFormFieldsFactory(interface=ci, user=user)
+    field = fields[f"flexible_widget_choice{prefixed_interface_slug}"]
+    assert field.current_socket_value is None
+    with pytest.raises(ValidationError, match="Select a valid choice."):
+        field.clean("IMAGE_SELECTED")
 
 
 @pytest.mark.django_db

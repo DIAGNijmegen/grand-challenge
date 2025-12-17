@@ -181,6 +181,7 @@ class MultipleCIVForm(Form):
             "title"
         ):
             current_value = None
+            current_socket_value = None
 
             prefixed_interface_slug = (
                 f"{INTERFACE_FORM_FIELD_PREFIX}{interface.slug}"
@@ -203,10 +204,13 @@ class MultipleCIVForm(Form):
                 except AttributeError:
                     current_value = self.data.get(prefixed_interface_slug)
 
-            if not current_value and instance:
-                current_value = instance.values.filter(
+            if instance:
+                current_socket_value = instance.values.filter(
                     interface__slug=interface.slug
                 ).first()
+
+                if not current_value:
+                    current_value = current_socket_value
 
             self.fields.update(
                 InterfaceFormFieldsFactory(
@@ -214,6 +218,7 @@ class MultipleCIVForm(Form):
                     user=self.user,
                     required=False,
                     initial=current_value,
+                    current_socket_value=current_socket_value,
                 )
             )
 
