@@ -317,10 +317,11 @@ class ComponentInterfaceValueSerializer(serializers.ModelSerializer):
     # Serializes images in place rather than with hyperlinks for internal usage
     image = SimpleImageSerializer(required=False)
     interface = ComponentInterfaceSerializer()
+    socket = ComponentInterfaceSerializer(source="interface")
 
     class Meta:
         model = ComponentInterfaceValue
-        fields = ["interface", "value", "file", "image", "pk"]
+        fields = ["socket", "interface", "value", "file", "image", "pk"]
         list_serializer_class = SortedCIVSerializer
 
 
