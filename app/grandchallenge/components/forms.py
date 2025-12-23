@@ -295,12 +295,15 @@ class MultipleCIVForm(Form):
         for key in keys_to_remove:
             cleaned_data.pop(key)
 
-        cleaned_data["civ_data_objects"] = inputs
+        # Mark as CIV data and not base-object data
+        cleaned_data[INTERFACE_FORM_FIELD_PREFIX + "civ_data_objects"] = inputs
 
         return cleaned_data
 
     def process_object_data(self):
-        civ_data_objects = self.cleaned_data.pop("civ_data_objects")
+        civ_data_objects = self.cleaned_data.pop(
+            INTERFACE_FORM_FIELD_PREFIX + "civ_data_objects"
+        )
 
         try:
             self.instance.validate_civ_data_objects_and_execute_linked_task(
