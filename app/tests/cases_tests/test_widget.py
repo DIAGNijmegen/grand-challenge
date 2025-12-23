@@ -13,9 +13,9 @@ from grandchallenge.cases.widgets import (
     ImageSourceChoiceField,
     ImageWidgetChoices,
 )
-from grandchallenge.components.form_fields import (
+from grandchallenge.components.forms import (
     INTERFACE_FORM_FIELD_PREFIX,
-    InterfaceFormFieldsFactory,
+    InterfaceFormFieldsMixin,
 )
 from grandchallenge.components.models import ComponentInterface
 from grandchallenge.uploads.models import UserUpload
@@ -204,25 +204,25 @@ def test_flexible_image_widget_prepopulated_value():
     ci = ComponentInterfaceFactory(kind=ComponentInterface.Kind.PANIMG_IMAGE)
     civ = ComponentInterfaceValueFactory(interface=ci, image=im)
 
-    field = InterfaceFormFieldsFactory(
+    field = InterfaceFormFieldsMixin.get_fields_for_interface(
         interface=ci, user=user_with_perm, initial=civ
     ).popitem()[1]
     assert field.widget.attrs["current_value"] == [civ.image]
     assert field.initial == civ.image.pk
 
-    field = InterfaceFormFieldsFactory(
+    field = InterfaceFormFieldsMixin.get_fields_for_interface(
         interface=ci, user=user_with_perm, initial=civ.image.pk
     ).popitem()[1]
     assert field.widget.attrs["current_value"] == [civ.image]
     assert field.initial == civ.image.pk
 
-    field = InterfaceFormFieldsFactory(
+    field = InterfaceFormFieldsMixin.get_fields_for_interface(
         interface=ci, user=user_without_perm, initial=civ
     ).popitem()[1]
     assert field.widget.attrs["current_value"] is None
     assert field.initial is None
 
-    field = InterfaceFormFieldsFactory(
+    field = InterfaceFormFieldsMixin.get_fields_for_interface(
         interface=ci, user=user_without_perm, initial=civ.image.pk
     ).popitem()[1]
     assert field.widget.attrs["current_value"] is None
@@ -307,7 +307,7 @@ def test_dicom_upload_widget_prepopulated_value():
     )
     civ = ComponentInterfaceValueFactory(interface=ci, image=im)
 
-    field = InterfaceFormFieldsFactory(
+    field = InterfaceFormFieldsMixin.get_fields_for_interface(
         interface=ci, user=user_with_perm, initial=civ
     ).popitem()[1]
     assert field.widget.attrs["current_value"] == civ.image
@@ -317,7 +317,7 @@ def test_dicom_upload_widget_prepopulated_value():
         for upload in civ.image.dicom_image_set.dicom_image_set_upload.user_uploads.all()
     ]
 
-    field = InterfaceFormFieldsFactory(
+    field = InterfaceFormFieldsMixin.get_fields_for_interface(
         interface=ci, user=user_without_perm, initial=civ
     ).popitem()[1]
     assert field.widget.attrs["current_value"] is None

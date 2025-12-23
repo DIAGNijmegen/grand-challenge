@@ -5,9 +5,9 @@ from grandchallenge.archives.forms import (
     ArchiveItemCreateForm,
     ArchiveItemUpdateForm,
 )
-from grandchallenge.components.form_fields import (
+from grandchallenge.components.forms import (
     INTERFACE_FORM_FIELD_PREFIX,
-    InterfaceFormFieldsFactory,
+    InterfaceFormFieldsMixin,
 )
 from grandchallenge.components.models import (
     ComponentInterface,
@@ -45,7 +45,9 @@ def test_interface_form_field_image_queryset_filter():
     upload1.status = UserUpload.StatusChoices.COMPLETED
     upload1.save()
     ci = ComponentInterfaceFactory(kind=ComponentInterface.Kind.PANIMG_IMAGE)
-    field = InterfaceFormFieldsFactory(interface=ci, user=user).popitem()[1]
+    field = InterfaceFormFieldsMixin.get_fields_for_interface(
+        interface=ci, user=user
+    ).popitem()[1]
     assert im1 in field.fields[0].queryset.all()
     assert im2 not in field.fields[0].queryset.all()
     assert upload1 in field.fields[1].queryset.all()
