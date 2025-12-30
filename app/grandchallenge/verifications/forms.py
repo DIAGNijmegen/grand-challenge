@@ -28,11 +28,19 @@ class VerificationForm(SaveFormInitMixin, forms.ModelForm):
     only_account = forms.BooleanField(
         required=True,
         initial=False,
-        widget=CheckboxInput,
+        widget=CheckboxInput(attrs={"class": "is-invalid"}),
         label="I confirm that this is my only account on Grand Challenge",
         help_text=(
             "You must only have one account per person - separate logins for the same person is not permitted. "
-            "If you are found to have multiple accounts they will all be permanently suspended."
+        ),
+    )
+    suspension_warning = forms.BooleanField(
+        required=True,
+        initial=False,
+        widget=CheckboxInput(attrs={"class": "is-invalid"}),
+        label="I understand that if I have multiple accounts, they will all be permanently suspended",
+        help_text=(
+            "Having multiple accounts is a violation of the Grand Challenge terms of service."
         ),
     )
 
