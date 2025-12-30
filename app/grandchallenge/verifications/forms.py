@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 class VerificationForm(SaveFormInitMixin, forms.ModelForm):
+    confirm_email = forms.EmailField(
+        label="Confirm email",
+        required=True,
+        help_text="Please confirm your email address.",
+    )
     only_account = forms.BooleanField(
         required=True,
         initial=False,
@@ -47,12 +52,21 @@ class VerificationForm(SaveFormInitMixin, forms.ModelForm):
             "Please provide your work, corporate or institutional email."
         )
 
+        self.order_fields(["user", "email", "confirm_email", "only_account"])
+
     def clean_email(self):
         email = self.cleaned_data["email"]
         email = get_user_model().objects.normalize_email(email)
         return email
 
     def clean(self):
+        cleaned_data = super().clean()
+        email = cleaned_data.get("email")
+        confirm_email = cleaned_data.get("confirm_email")
+
+        if email and confirm_email and email != confirm_email:
+            self.add_error("confirm_email", "Email addresses do not match.")
+
         if self.user.user_profile.is_incomplete:
             raise ValidationError(
                 format_html(

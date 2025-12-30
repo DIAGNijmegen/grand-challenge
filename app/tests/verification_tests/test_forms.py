@@ -159,6 +159,36 @@ class TestVerificationForm:
             f"Your profile information is incomplete. You can complete your profile <a href={profile_link!r}>here</a>."
         ] == form.errors["__all__"]
 
+    def test_email_confirmation_mismatch(self):
+        u = UserFactory()
+        u.user_profile.institution = "Foo"
+        u.user_profile.department = "Bar"
+        u.user_profile.country = "US"
+        u.user_profile.save()
+
+        form = VerificationForm(
+            user=u,
+            data={
+                "email": "test@example.com",
+                "confirm_email": "other@example.com",
+                "user": u.pk,
+                "only_account": True,
+            },
+        )
+        assert "Email addresses do not match." in form.errors["confirm_email"]
+        assert not form.is_valid()
+
+        form = VerificationForm(
+            user=u,
+            data={
+                "email": "test@example.com",
+                "confirm_email": "test@example.com",
+                "user": u.pk,
+                "only_account": True,
+            },
+        )
+        assert "confirm_email" not in form.errors
+
 
 @pytest.mark.django_db
 class TestConfirmEmailForm:
