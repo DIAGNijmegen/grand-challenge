@@ -38,9 +38,9 @@ class VerificationForm(SaveFormInitMixin, forms.ModelForm):
         required=True,
         initial=False,
         widget=CheckboxInput(attrs={"class": "is-invalid"}),
-        label="I understand that if I have multiple accounts, they will all be permanently suspended",
+        label="I understand that if I have multiple accounts, I will be permanently suspended",
         help_text=(
-            "Having multiple accounts is a violation of the Grand Challenge terms of service."
+            "Having multiple accounts, even under different email addresses, is a violation of the Grand Challenge terms of service."
         ),
     )
 
@@ -60,7 +60,15 @@ class VerificationForm(SaveFormInitMixin, forms.ModelForm):
             "Please provide your work, corporate or institutional email."
         )
 
-        self.order_fields(["user", "email", "confirm_email", "only_account"])
+        self.order_fields(
+            [
+                "user",
+                "email",
+                "confirm_email",
+                "only_account",
+                "suspension_warning",
+            ]
+        )
 
     def clean_email(self):
         email = self.cleaned_data["email"]
